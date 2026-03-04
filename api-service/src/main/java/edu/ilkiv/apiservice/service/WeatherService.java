@@ -1,6 +1,6 @@
 package edu.ilkiv.apiservice.service;
 
-import edu.ilkiv.lab12.model.WeatherResponse;
+import edu.ilkiv.apiservice.model.WeatherResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

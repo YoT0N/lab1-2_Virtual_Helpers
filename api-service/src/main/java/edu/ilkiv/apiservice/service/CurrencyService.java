@@ -1,6 +1,6 @@
 package edu.ilkiv.apiservice.service;
 
-import edu.ilkiv.lab12.model.CurrencyResponse;
+import edu.ilkiv.apiservice.model.CurrencyResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

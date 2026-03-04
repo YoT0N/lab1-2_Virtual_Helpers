@@ -1,7 +1,7 @@
 package edu.ilkiv.apiservice.controller;
 
-import com.lab.api.model.WeatherResponse;
-import com.lab.api.service.WeatherService;
+import edu.ilkiv.apiservice.model.WeatherResponse;
+import edu.ilkiv.apiservice.service.WeatherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

@@ -1,6 +1,6 @@
 package edu.ilkiv.apiservice.exception;
 
-import edu.ilkiv.lab12.model.ErrorResponse;
+import edu.ilkiv.apiservice.model.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

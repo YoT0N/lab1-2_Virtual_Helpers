@@ -1,7 +1,7 @@
 package edu.ilkiv.apiservice.controller;
 
-import edu.ilkiv.lab12.model.CurrencyResponse;
-import edu.ilkiv.lab12.service.CurrencyService;
+import edu.ilkiv.apiservice.model.CurrencyResponse;
+import edu.ilkiv.apiservice.service.CurrencyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
