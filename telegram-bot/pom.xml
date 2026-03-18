@@ -6,26 +6,24 @@
 	<parent>
 		<groupId>edu.ilkiv</groupId>
 		<artifactId>lab1-2</artifactId>
-		<version>1.0.0</version>           <!-- ← має ТОЧНО збігатись з версією в кореневому pom.xml -->
-		<relativePath>../pom.xml</relativePath>  <!-- ← ВИПРАВЛЕНО: вказуємо шлях до батька -->
+		<version>1.0.0</version>
+		<relativePath>../pom.xml</relativePath>
 	</parent>
 
 	<artifactId>telegram-bot</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
 	<n>telegram-bot</n>
-
-	<properties>
-		<java.version>17</java.version>
-	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+
+		<!-- ← ВИПРАВЛЕНО: використовуємо telegrambots без spring-boot-starter
+             бо версія 6.9.7.1 несумісна зі Spring Boot 3.4.x               -->
 		<dependency>
 			<groupId>org.telegram</groupId>
-			<artifactId>telegrambots-spring-boot-starter</artifactId>
+			<artifactId>telegrambots</artifactId>
 			<version>6.9.7.1</version>
 		</dependency>
 	</dependencies>
@@ -35,6 +33,14 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

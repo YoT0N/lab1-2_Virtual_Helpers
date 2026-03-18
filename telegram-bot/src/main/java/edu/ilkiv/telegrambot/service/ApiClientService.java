@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Locale;
 import java.util.Map;
 
 @Slf4j
@@ -19,17 +20,44 @@ public class ApiClientService {
     @Value("${api.service.url:http://localhost:8080}")
     private String apiUrl;
 
+    // Словник українських назв міст → англійські для OpenWeather API
+    private static final Map<String, String> CITY_MAP = Map.ofEntries(
+            Map.entry("київ",       "Kyiv"),
+            Map.entry("харків",     "Kharkiv"),
+            Map.entry("одеса",      "Odessa"),
+            Map.entry("дніпро",     "Dnipro"),
+            Map.entry("львів",      "Lviv"),
+            Map.entry("запоріжжя",  "Zaporizhzhia"),
+            Map.entry("миколаїв",   "Mykolaiv"),
+            Map.entry("вінниця",    "Vinnytsia"),
+            Map.entry("херсон",     "Kherson"),
+            Map.entry("полтава",    "Poltava"),
+            Map.entry("чернігів",   "Chernihiv"),
+            Map.entry("черкаси",    "Cherkasy"),
+            Map.entry("суми",       "Sumy"),
+            Map.entry("житомир",    "Zhytomyr"),
+            Map.entry("рівне",      "Rivne"),
+            Map.entry("тернопіль",  "Ternopil"),
+            Map.entry("луцьк",      "Lutsk"),
+            Map.entry("ужгород",    "Uzhhorod"),
+            Map.entry("чернівці",   "Chernivtsi"),
+            Map.entry("хмельницький", "Khmelnytskyi"),
+            Map.entry("івано-франківськ", "Ivano-Frankivsk")
+    );
+
     public String getWeather(String city) {
         try {
+            String translatedCity = CITY_MAP.getOrDefault(city.toLowerCase().trim(), city);
+            log.info("Запит погоди: '{}' -> '{}'", city, translatedCity);
+
             Map<String, Object> data = restTemplate.getForObject(
-                    apiUrl + "/weather?city=" + city, Map.class);
+                    apiUrl + "/weather?city=" + translatedCity, Map.class);
             return formatWeather(data);
         } catch (ResourceAccessException e) {
-            log.error("API service unavailable: {}", e.getMessage());
             return "❌ API сервіс недоступний. Переконайтесь що api-service запущений на порту 8080.";
         } catch (Exception e) {
             log.error("Weather error: {}", e.getMessage());
-            return "❌ Помилка: " + extractMessage(e);
+            return "❌ Місто не знайдено: *" + city + "*\n\nСпробуйте англійською: `/weather Chernivtsi`";
         }
     }
 
@@ -39,7 +67,6 @@ public class ApiClientService {
                     apiUrl + "/currency?base=" + base, Map.class);
             return formatRates(data);
         } catch (ResourceAccessException e) {
-            log.error("API service unavailable: {}", e.getMessage());
             return "❌ API сервіс недоступний.";
         } catch (Exception e) {
             log.error("Currency error: {}", e.getMessage());
@@ -49,15 +76,16 @@ public class ApiClientService {
 
     public String convert(String from, String to, double amount) {
         try {
-            String url = String.format("%s/currency/convert?from=%s&to=%s&amount=%.2f",
-                    apiUrl, from, to, amount);
+            String url = String.format(Locale.US, "%s/currency/convert?from=%s&to=%s&amount=%.2f",
+                    apiUrl, from.toUpperCase(), to.toUpperCase(), amount);
+
             Map<String, Object> data = restTemplate.getForObject(url, Map.class);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> rates = (Map<String, Object>) data.get("rates");
             double result = toDouble(rates.get(to.toUpperCase()));
 
-            return String.format("💱 *Конвертація*\n\n%.2f %s = *%.2f %s*",
+            return String.format(Locale.US, "💱 *Конвертація*\n\n%.2f %s = *%.2f %s*",
                     amount, from.toUpperCase(), result, to.toUpperCase());
         } catch (Exception e) {
             return "❌ Помилка конвертації: " + extractMessage(e);
@@ -66,7 +94,7 @@ public class ApiClientService {
 
     @SuppressWarnings("unchecked")
     private String formatWeather(Map<String, Object> d) {
-        return String.format(
+        return String.format(Locale.US,
                 "🌤 *Погода: %s, %s*\n\n" +
                         "🌡 Температура: *%.1f°C*\n" +
                         "🤔 Відчувається: %.1f°C\n" +
@@ -90,7 +118,8 @@ public class ApiClientService {
             rates.entrySet().stream()
                     .filter(e -> !e.getKey().equals(base))
                     .sorted(Map.Entry.comparingByKey())
-                    .forEach(e -> sb.append(String.format("%-5s → %.4f\n", e.getKey(), toDouble(e.getValue()))));
+                    .forEach(e -> sb.append(
+                            String.format(Locale.US, "%-5s -> %.4f\n", e.getKey(), toDouble(e.getValue()))));
         }
         return sb.toString();
     }
@@ -104,5 +133,3 @@ public class ApiClientService {
         return e.getMessage() != null ? e.getMessage() : "Невідома помилка";
     }
 }
-
-

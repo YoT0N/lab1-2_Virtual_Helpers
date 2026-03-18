@@ -1,6 +1,5 @@
 package edu.ilkiv.telegrambot.handler;
 
-
 import edu.ilkiv.telegrambot.service.ApiClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,15 +21,17 @@ public class InfoBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username}")
     private String botUsername;
 
-    // Патерни для розпізнавання вільного тексту (NLP)
+    // ← ВИПРАВЛЕНО: використовуємо \p{L} замість а-яА-Я
+    // \p{L} охоплює ВСІ літери Unicode: і, ї, є, ґ і т.д.
     private static final Pattern WEATHER_PATTERN =
-            Pattern.compile("(?i)(?:погода|weather|температура)\\s*(?:в|у|in)?\\s*([а-яА-Яa-zA-Z\\-]+)");
+            Pattern.compile("(?i)(?:погода|weather|температура)\\s*(?:в|у|in)?\\s*([\\p{L}\\-]+(?:\\s+[\\p{L}\\-]+)*)");
 
     private static final Pattern CURRENCY_PATTERN =
             Pattern.compile("(?i)(?:курс|валюта|currency)\\s*([a-zA-Z]{3})?");
 
+    // ← ВИПРАВЛЕНО: після парсингу замінюємо кому на крапку
     private static final Pattern CONVERT_PATTERN =
-            Pattern.compile("(?i)(\\d+(?:[.,]\\d+)?)\\s*([a-zA-Z]{3})\\s*(?:в|to|->|у)\\s*([a-zA-Z]{3})");
+            Pattern.compile("(?i)([\\d]+(?:[.,]\\d+)?)\\s*([a-zA-Z]{3})\\s*(?:в|to|->|у)\\s*([a-zA-Z]{3})");
 
     public InfoBot(ApiClientService api,
                    @Value("${telegram.bot.token}") String token) {
@@ -47,9 +48,9 @@ public class InfoBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (!update.hasMessage() || !update.getMessage().hasText()) return;
 
-        String text    = update.getMessage().getText().trim();
-        long   chatId  = update.getMessage().getChatId();
-        String name    = update.getMessage().getFrom().getFirstName();
+        String text  = update.getMessage().getText().trim();
+        long chatId  = update.getMessage().getChatId();
+        String name  = update.getMessage().getFrom().getFirstName();
 
         log.info("Повідомлення від {} (chatId={}): {}", name, chatId, text);
 
@@ -57,15 +58,9 @@ public class InfoBot extends TelegramLongPollingBot {
         send(chatId, reply);
     }
 
-    // ── Обробка команд і тексту ──────────────────────────────────────────
-
     private String process(String text, String name) {
-
-        if (text.startsWith("/start"))
-            return startMessage(name);
-
-        if (text.startsWith("/help"))
-            return helpMessage();
+        if (text.startsWith("/start"))   return startMessage(name);
+        if (text.startsWith("/help"))    return helpMessage();
 
         if (text.startsWith("/weather")) {
             String city = arg(text, "/weather");
@@ -80,34 +75,34 @@ public class InfoBot extends TelegramLongPollingBot {
         if (text.startsWith("/convert"))
             return handleConvert(arg(text, "/convert"));
 
-        // Вільний текст
         return handleFreeText(text);
     }
 
     private String handleFreeText(String text) {
-        // "100 USD в UAH"
+        // "100 USD в UAH" або "100,5 USD в UAH"
         Matcher cm = CONVERT_PATTERN.matcher(text);
         if (cm.find()) {
+            // ← ВИПРАВЛЕНО: замінюємо кому на крапку перед парсингом
             double amount = Double.parseDouble(cm.group(1).replace(',', '.'));
             return api.convert(cm.group(2), cm.group(3), amount);
         }
 
-        // "погода в Харкові"
+        // "погода в Чернівцях", "погода в Одесі"
         Matcher wm = WEATHER_PATTERN.matcher(text);
         if (wm.find()) {
             String city = wm.group(1);
-            return city != null ? api.getWeather(city.trim())
+            return city != null
+                    ? api.getWeather(city.trim())
                     : "🌤 Напишіть місто: *погода в Києві* або /weather Kyiv";
         }
 
-        // "курс EUR" / "курс валют"
+        // "курс EUR"
         Matcher curm = CURRENCY_PATTERN.matcher(text);
         if (curm.find()) {
             String base = curm.group(1);
             return api.getRates(base != null ? base.toUpperCase() : "USD");
         }
 
-        // Привітання
         if (text.matches("(?i)(привіт|hello|hi|добрий день|хай).*"))
             return "👋 Привіт! Напишіть /help щоб побачити команди.";
 
@@ -117,16 +112,15 @@ public class InfoBot extends TelegramLongPollingBot {
 
     private String handleConvert(String args) {
         Matcher m = Pattern.compile(
-                "(?i)(\\d+(?:[.,]\\d+)?)\\s+([a-zA-Z]{3})\\s+(?:to|в|у|->)\\s+([a-zA-Z]{3})"
+                "(?i)([\\d]+(?:[.,]\\d+)?)\\s+([a-zA-Z]{3})\\s+(?:to|в|у|->)\\s+([a-zA-Z]{3})"
         ).matcher(args);
         if (m.find()) {
+            // ← ВИПРАВЛЕНО: замінюємо кому на крапку
             double amount = Double.parseDouble(m.group(1).replace(',', '.'));
             return api.convert(m.group(2), m.group(3), amount);
         }
         return "❓ Формат: /convert 100 USD to UAH";
     }
-
-    // ── Повідомлення ─────────────────────────────────────────────────────
 
     private String startMessage(String name) {
         return String.format(
@@ -148,8 +142,6 @@ public class InfoBot extends TelegramLongPollingBot {
                 "`/convert 100 USD to UAH` або `100 EUR в PLN`\n\n" +
                 "💡 Можна писати без команд — я розумію вільний текст!";
     }
-
-    // ── Утиліти ──────────────────────────────────────────────────────────
 
     private String arg(String text, String command) {
         String s = text.substring(command.length()).trim();

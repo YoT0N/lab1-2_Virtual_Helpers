@@ -1,22 +1,24 @@
-2026-03-04T23:34:20.028+02:00  INFO 6028 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Starting ApiServiceApplication using Java 17.0.14 with PID 6028 (C:\Lessons\Course4_2\Virtual helpers\lab1-2\api-service\target\classes started by Bodya in C:\Lessons\Course4_2\Virtual helpers\lab1-2)
-2026-03-04T23:34:20.033+02:00  INFO 6028 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : No active profile set, falling back to 1 default profile: "default"
-2026-03-04T23:34:23.055+02:00  INFO 6028 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-03-04T23:34:23.088+02:00  INFO 6028 --- [api-service] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-04T23:34:23.092+02:00  INFO 6028 --- [api-service] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2026-03-04T23:34:23.231+02:00  INFO 6028 --- [api-service] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-04T23:34:23.232+02:00  INFO 6028 --- [api-service] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3027 ms
-2026-03-04T23:34:24.454+02:00  INFO 6028 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2026-03-04T23:34:24.476+02:00  INFO 6028 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Started ApiServiceApplication in 5.843 seconds (process running for 10.418)
-2026-03-04T23:35:50.854+02:00  INFO 6028 --- [api-service] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-04T23:35:51.801+02:00  INFO 6028 --- [api-service] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2026-03-04T23:36:01.066+02:00  INFO 15292 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Starting ApiServiceApplication using Java 17.0.14 with PID 15292 (C:\Lessons\Course4_2\Virtual helpers\lab1-2\api-service\target\classes started by Bodya in C:\Lessons\Course4_2\Virtual helpers\lab1-2)
-2026-03-04T23:36:01.072+02:00  INFO 15292 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : No active profile set, falling back to 1 default profile: "default"
-2026-03-04T23:36:03.828+02:00  INFO 15292 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-03-04T23:36:03.862+02:00  INFO 15292 --- [api-service] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-04T23:36:03.863+02:00  INFO 15292 --- [api-service] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2026-03-04T23:36:03.991+02:00  INFO 15292 --- [api-service] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-04T23:36:03.992+02:00  INFO 15292 --- [api-service] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2800 ms
-2026-03-04T23:36:05.155+02:00  INFO 15292 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2026-03-04T23:36:05.181+02:00  INFO 15292 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Started ApiServiceApplication in 5.45 seconds (process running for 7.102)
-2026-03-04T23:36:22.776+02:00  INFO 15292 --- [api-service] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-04T23:36:24.216+02:00  INFO 15292 --- [api-service] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-18T23:15:35.127+02:00  INFO 13472 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Starting ApiServiceApplication using Java 17.0.14 with PID 13472 (C:\Lessons\Course4_2\Virtual helpers\lab1-2\api-service\target\classes started by Bodya in C:\Lessons\Course4_2\Virtual helpers\lab1-2)
+2026-03-18T23:15:35.141+02:00  INFO 13472 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : No active profile set, falling back to 1 default profile: "default"
+2026-03-18T23:15:37.910+02:00  INFO 13472 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-18T23:15:37.948+02:00  INFO 13472 --- [api-service] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-18T23:15:37.951+02:00  INFO 13472 --- [api-service] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2026-03-18T23:15:38.122+02:00  INFO 13472 --- [api-service] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-18T23:15:38.124+02:00  INFO 13472 --- [api-service] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2841 ms
+2026-03-18T23:15:39.538+02:00  INFO 13472 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-18T23:15:39.566+02:00  INFO 13472 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Started ApiServiceApplication in 5.785 seconds (process running for 8.521)
+2026-03-18T23:16:03.284+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-18T23:16:03.285+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-18T23:16:03.288+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-03-18T23:16:03.368+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.a.config.RequestLoggingInterceptor   : → GET /weather | IP: 127.0.0.1 | Params: city=Kyiv
+2026-03-18T23:16:03.427+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.a.controller.WeatherController       : GET /weather - city: Kyiv
+2026-03-18T23:16:03.612+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.apiservice.service.WeatherService    : Fetching weather for city: Kyiv
+2026-03-18T23:16:05.072+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.a.config.RequestLoggingInterceptor   : ← GET /weather | Status: 200 | Time: 1701ms
+2026-03-18T23:17:12.418+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.a.config.RequestLoggingInterceptor   : → GET /weather | IP: 127.0.0.1 | Params: city=Chernivtsi
+2026-03-18T23:17:12.419+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.a.controller.WeatherController       : GET /weather - city: Chernivtsi
+2026-03-18T23:17:12.420+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.apiservice.service.WeatherService    : Fetching weather for city: Chernivtsi
+2026-03-18T23:17:12.664+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.a.config.RequestLoggingInterceptor   : ← GET /weather | Status: 200 | Time: 245ms
+2026-03-18T23:18:50.620+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.a.config.RequestLoggingInterceptor   : → GET /currency | IP: 127.0.0.1 | Params: base=USD
+2026-03-18T23:18:50.622+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.a.controller.CurrencyController      : GET /currency - base: USD
+2026-03-18T23:18:50.624+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
+2026-03-18T23:18:50.938+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency | Status: 200 | Time: 317ms

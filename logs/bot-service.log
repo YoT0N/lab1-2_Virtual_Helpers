@@ -1,12 +1,23 @@
-2026-03-04T23:35:03.845+02:00  INFO 5392 --- [telegram-bot] [main] e.i.telegrambot.TelegramBotApplication   : Starting TelegramBotApplication using Java 17.0.14 with PID 5392 (C:\Lessons\Course4_2\Virtual helpers\lab1-2\telegram-bot\target\classes started by Bodya in C:\Lessons\Course4_2\Virtual helpers\lab1-2)
-2026-03-04T23:35:03.854+02:00  INFO 5392 --- [telegram-bot] [main] e.i.telegrambot.TelegramBotApplication   : No active profile set, falling back to 1 default profile: "default"
-2026-03-04T23:35:06.395+02:00  INFO 5392 --- [telegram-bot] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
-2026-03-04T23:35:06.443+02:00  INFO 5392 --- [telegram-bot] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-04T23:35:06.444+02:00  INFO 5392 --- [telegram-bot] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2026-03-04T23:35:06.613+02:00  INFO 5392 --- [telegram-bot] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-04T23:35:06.613+02:00  INFO 5392 --- [telegram-bot] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2630 ms
-2026-03-04T23:35:07.609+02:00  INFO 5392 --- [telegram-bot] [main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
-2026-03-04T23:35:08.246+02:00  INFO 5392 --- [telegram-bot] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
-2026-03-04T23:35:08.267+02:00  INFO 5392 --- [telegram-bot] [main] e.i.telegrambot.TelegramBotApplication   : Started TelegramBotApplication in 5.858 seconds (process running for 9.119)
-2026-03-04T23:36:22.709+02:00  INFO 5392 --- [telegram-bot] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-04T23:36:24.208+02:00  INFO 5392 --- [telegram-bot] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-18T23:14:37.382+02:00  INFO 5292 --- [telegram-bot] [main] e.i.telegrambot.TelegramBotApplication   : Starting TelegramBotApplication using Java 17.0.14 with PID 5292 (C:\Lessons\Course4_2\Virtual helpers\lab1-2\telegram-bot\target\classes started by Bodya in C:\Lessons\Course4_2\Virtual helpers\lab1-2)
+2026-03-18T23:14:37.414+02:00 DEBUG 5292 --- [telegram-bot] [main] e.i.telegrambot.TelegramBotApplication   : Running with Spring Boot v3.4.5, Spring v6.2.6
+2026-03-18T23:14:37.416+02:00  INFO 5292 --- [telegram-bot] [main] e.i.telegrambot.TelegramBotApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-03-18T23:14:40.197+02:00  INFO 5292 --- [telegram-bot] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-03-18T23:14:40.237+02:00  INFO 5292 --- [telegram-bot] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-18T23:14:40.238+02:00  INFO 5292 --- [telegram-bot] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2026-03-18T23:14:40.427+02:00  INFO 5292 --- [telegram-bot] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-18T23:14:40.429+02:00  INFO 5292 --- [telegram-bot] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2845 ms
+2026-03-18T23:14:41.551+02:00  INFO 5292 --- [telegram-bot] [main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2026-03-18T23:14:42.170+02:00  INFO 5292 --- [telegram-bot] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
+2026-03-18T23:14:42.194+02:00  INFO 5292 --- [telegram-bot] [main] e.i.telegrambot.TelegramBotApplication   : Started TelegramBotApplication in 6.213 seconds (process running for 18.079)
+2026-03-18T23:15:05.093+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): Погода чернівці
+2026-03-18T23:15:17.114+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): погода чернівці
+2026-03-18T23:15:17.116+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] e.i.t.service.ApiClientService           : Запит погоди: 'чернівці' -> 'Chernivtsi'
+2026-03-18T23:15:44.356+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): Погода чернівці
+2026-03-18T23:16:03.109+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): /weather Kyiv
+2026-03-18T23:16:03.111+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] e.i.t.service.ApiClientService           : Запит погоди: 'Kyiv' -> 'Kyiv'
+2026-03-18T23:17:12.409+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): погода чернівці
+2026-03-18T23:17:12.411+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] e.i.t.service.ApiClientService           : Запит погоди: 'чернівці' -> 'Chernivtsi'
+2026-03-18T23:17:33.384+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): Температура київ
+2026-03-18T23:17:56.754+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): Температура в київ
+2026-03-18T23:18:34.649+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): Курс доллар
+2026-03-18T23:18:50.608+02:00  INFO 5292 --- [telegram-bot] [verificate_userinfo_bot Telegram Executor] edu.ilkiv.telegrambot.handler.InfoBot    : Повідомлення від Bodya (chatId=968333041): /currency USD

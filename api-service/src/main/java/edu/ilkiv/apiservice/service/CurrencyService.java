@@ -38,11 +38,12 @@ public class CurrencyService {
                 throw new RuntimeException("Не вдалося отримати курси валют");
             }
 
+            // ← ВИПРАВЛЕНО: API повертає мішанину Integer і Double
+            // тому беремо Map<String, Object> і конвертуємо через toDouble()
             @SuppressWarnings("unchecked")
-            Map<String, Double> conversionRates =
-                    (Map<String, Double>) response.get("conversion_rates");
+            Map<String, Object> conversionRates =
+                    (Map<String, Object>) response.get("conversion_rates");
 
-            // Return only popular currencies
             Map<String, Double> filteredRates = filterPopularCurrencies(conversionRates);
 
             return CurrencyResponse.builder()
@@ -83,14 +84,22 @@ public class CurrencyService {
                 .build();
     }
 
-    private Map<String, Double> filterPopularCurrencies(Map<String, Double> all) {
+    // ← ВИПРАВЛЕНО: приймає Map<String, Object> замість Map<String, Double>
+    // і конвертує кожне значення через toDouble() щоб обробити і Integer і Double
+    private Map<String, Double> filterPopularCurrencies(Map<String, Object> all) {
         String[] popular = {"USD", "EUR", "GBP", "PLN", "UAH", "CHF", "JPY", "CZK", "HUF", "CAD"};
         Map<String, Double> filtered = new HashMap<>();
         for (String code : popular) {
             if (all.containsKey(code)) {
-                filtered.put(code, all.get(code));
+                filtered.put(code, toDouble(all.get(code)));
             }
         }
         return filtered;
+    }
+
+    // ← ВИПРАВЛЕНО: універсальний метод який обробляє Integer, Double, Long і т.д.
+    private double toDouble(Object value) {
+        if (value instanceof Number n) return n.doubleValue();
+        return 0.0;
     }
 }
