@@ -15,10 +15,7 @@ public class CurrencyController {
 
     private final CurrencyService currencyService;
 
-    /**
-     * GET /currency?base=USD
-     * Returns exchange rates for the specified base currency
-     */
+
     @GetMapping
     public ResponseEntity<CurrencyResponse> getRates(
             @RequestParam(defaultValue = "USD") String base) {
@@ -28,10 +25,7 @@ public class CurrencyController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * GET /currency/convert?from=USD&to=UAH&amount=100
-     * Converts amount from one currency to another
-     */
+
     @GetMapping("/convert")
     public ResponseEntity<CurrencyResponse> convert(
             @RequestParam(defaultValue = "USD") String from,

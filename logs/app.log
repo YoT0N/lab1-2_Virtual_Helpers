@@ -1,24 +1,56 @@
-2026-03-18T23:15:35.127+02:00  INFO 13472 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Starting ApiServiceApplication using Java 17.0.14 with PID 13472 (C:\Lessons\Course4_2\Virtual helpers\lab1-2\api-service\target\classes started by Bodya in C:\Lessons\Course4_2\Virtual helpers\lab1-2)
-2026-03-18T23:15:35.141+02:00  INFO 13472 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : No active profile set, falling back to 1 default profile: "default"
-2026-03-18T23:15:37.910+02:00  INFO 13472 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-03-18T23:15:37.948+02:00  INFO 13472 --- [api-service] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-18T23:15:37.951+02:00  INFO 13472 --- [api-service] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
-2026-03-18T23:15:38.122+02:00  INFO 13472 --- [api-service] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-18T23:15:38.124+02:00  INFO 13472 --- [api-service] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2841 ms
-2026-03-18T23:15:39.538+02:00  INFO 13472 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2026-03-18T23:15:39.566+02:00  INFO 13472 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Started ApiServiceApplication in 5.785 seconds (process running for 8.521)
-2026-03-18T23:16:03.284+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-03-18T23:16:03.285+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-03-18T23:16:03.288+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
-2026-03-18T23:16:03.368+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.a.config.RequestLoggingInterceptor   : → GET /weather | IP: 127.0.0.1 | Params: city=Kyiv
-2026-03-18T23:16:03.427+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.a.controller.WeatherController       : GET /weather - city: Kyiv
-2026-03-18T23:16:03.612+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.apiservice.service.WeatherService    : Fetching weather for city: Kyiv
-2026-03-18T23:16:05.072+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-1] e.i.a.config.RequestLoggingInterceptor   : ← GET /weather | Status: 200 | Time: 1701ms
-2026-03-18T23:17:12.418+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.a.config.RequestLoggingInterceptor   : → GET /weather | IP: 127.0.0.1 | Params: city=Chernivtsi
-2026-03-18T23:17:12.419+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.a.controller.WeatherController       : GET /weather - city: Chernivtsi
-2026-03-18T23:17:12.420+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.apiservice.service.WeatherService    : Fetching weather for city: Chernivtsi
-2026-03-18T23:17:12.664+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-3] e.i.a.config.RequestLoggingInterceptor   : ← GET /weather | Status: 200 | Time: 245ms
-2026-03-18T23:18:50.620+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.a.config.RequestLoggingInterceptor   : → GET /currency | IP: 127.0.0.1 | Params: base=USD
-2026-03-18T23:18:50.622+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.a.controller.CurrencyController      : GET /currency - base: USD
-2026-03-18T23:18:50.624+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
-2026-03-18T23:18:50.938+02:00  INFO 13472 --- [api-service] [http-nio-8080-exec-5] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency | Status: 200 | Time: 317ms
+2026-03-19T00:13:38.050+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-5] e.i.a.config.RequestLoggingInterceptor   : → GET /currency/convert | IP: 127.0.0.1 | Params: from=EUR&to=USD&amount=100.00
+2026-03-19T00:13:38.062+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-5] e.i.a.controller.CurrencyController      : GET /currency/convert - from: EUR, to: USD, amount: 100.0
+2026-03-19T00:13:38.063+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-5] e.i.apiservice.service.CurrencyService   : Converting 100.0 EUR to USD
+2026-03-19T00:13:38.064+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-5] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: EUR
+2026-03-19T00:13:38.363+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-5] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency/convert | Status: 200 | Time: 305ms
+2026-03-19T00:31:09.023+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-7] e.i.a.config.RequestLoggingInterceptor   : → GET /currency/convert | IP: 127.0.0.1 | Params: from=USD&to=UAH&amount=100.00
+2026-03-19T00:31:09.024+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-7] e.i.a.controller.CurrencyController      : GET /currency/convert - from: USD, to: UAH, amount: 100.0
+2026-03-19T00:31:09.025+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-7] e.i.apiservice.service.CurrencyService   : Converting 100.0 USD to UAH
+2026-03-19T00:31:09.025+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-7] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
+2026-03-19T00:31:09.342+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-7] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency/convert | Status: 200 | Time: 319ms
+2026-03-19T00:31:26.440+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-8] e.i.a.config.RequestLoggingInterceptor   : → GET /currency/convert | IP: 127.0.0.1 | Params: from=USD&to=UAH&amount=200.00
+2026-03-19T00:31:26.442+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-8] e.i.a.controller.CurrencyController      : GET /currency/convert - from: USD, to: UAH, amount: 200.0
+2026-03-19T00:31:26.442+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-8] e.i.apiservice.service.CurrencyService   : Converting 200.0 USD to UAH
+2026-03-19T00:31:26.442+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-8] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
+2026-03-19T00:31:26.617+02:00  INFO 960 --- [api-service] [http-nio-8080-exec-8] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency/convert | Status: 200 | Time: 176ms
+2026-03-19T00:31:42.820+02:00  INFO 960 --- [api-service] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-19T00:31:45.945+02:00  INFO 960 --- [api-service] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-19T10:12:13.403+02:00  INFO 4792 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Starting ApiServiceApplication using Java 17.0.14 with PID 4792 (C:\Lessons\Course4_2\Virtual helpers\lab1-2\api-service\target\classes started by Bodya in C:\Lessons\Course4_2\Virtual helpers\lab1-2)
+2026-03-19T10:12:13.412+02:00  INFO 4792 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : No active profile set, falling back to 1 default profile: "default"
+2026-03-19T10:12:15.984+02:00  INFO 4792 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-19T10:12:16.021+02:00  INFO 4792 --- [api-service] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-19T10:12:16.022+02:00  INFO 4792 --- [api-service] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2026-03-19T10:12:16.152+02:00  INFO 4792 --- [api-service] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-19T10:12:16.154+02:00  INFO 4792 --- [api-service] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2597 ms
+2026-03-19T10:12:17.475+02:00  INFO 4792 --- [api-service] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-19T10:12:17.500+02:00  INFO 4792 --- [api-service] [main] e.i.apiservice.ApiServiceApplication     : Started ApiServiceApplication in 5.675 seconds (process running for 8.505)
+2026-03-19T10:12:49.858+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-19T10:12:49.859+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-19T10:12:49.861+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-03-19T10:12:49.907+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] e.i.a.config.RequestLoggingInterceptor   : → GET /currency/convert | IP: 127.0.0.1 | Params: from=USD&to=UAH&amount=200.00
+2026-03-19T10:12:49.959+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] e.i.a.controller.CurrencyController      : GET /currency/convert - from: USD, to: UAH, amount: 200.0
+2026-03-19T10:12:49.960+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] e.i.apiservice.service.CurrencyService   : Converting 200.0 USD to UAH
+2026-03-19T10:12:49.961+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
+2026-03-19T10:12:51.173+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-1] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency/convert | Status: 200 | Time: 1262ms
+2026-03-19T10:47:50.157+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-4] e.i.a.config.RequestLoggingInterceptor   : → GET /currency/convert | IP: 0:0:0:0:0:0:0:1 | Params: from=USD&to=UAH&amount=100
+2026-03-19T10:47:50.159+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-4] e.i.a.controller.CurrencyController      : GET /currency/convert - from: USD, to: UAH, amount: 100.0
+2026-03-19T10:47:50.160+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-4] e.i.apiservice.service.CurrencyService   : Converting 100.0 USD to UAH
+2026-03-19T10:47:50.161+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-4] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
+2026-03-19T10:47:50.835+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-4] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency/convert | Status: 200 | Time: 677ms
+2026-03-19T11:02:04.924+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-6] e.i.a.config.RequestLoggingInterceptor   : → GET /weather | IP: 127.0.0.1 | Params: city=Chernivtsi
+2026-03-19T11:02:04.928+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-6] e.i.a.controller.WeatherController       : GET /weather - city: Chernivtsi
+2026-03-19T11:02:05.012+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-6] e.i.apiservice.service.WeatherService    : Fetching weather for city: Chernivtsi
+2026-03-19T11:02:05.390+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-6] e.i.a.config.RequestLoggingInterceptor   : ← GET /weather | Status: 200 | Time: 466ms
+2026-03-19T11:02:14.346+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-7] e.i.a.config.RequestLoggingInterceptor   : → GET /currency/convert | IP: 127.0.0.1 | Params: from=USD&to=UAH&amount=200.00
+2026-03-19T11:02:14.347+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-7] e.i.a.controller.CurrencyController      : GET /currency/convert - from: USD, to: UAH, amount: 200.0
+2026-03-19T11:02:14.348+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-7] e.i.apiservice.service.CurrencyService   : Converting 200.0 USD to UAH
+2026-03-19T11:02:14.348+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-7] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
+2026-03-19T11:02:14.718+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-7] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency/convert | Status: 200 | Time: 372ms
+2026-03-19T11:02:20.149+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-8] e.i.a.config.RequestLoggingInterceptor   : → GET /currency | IP: 127.0.0.1 | Params: base=USD
+2026-03-19T11:02:20.151+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-8] e.i.a.controller.CurrencyController      : GET /currency - base: USD
+2026-03-19T11:02:20.153+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-8] e.i.apiservice.service.CurrencyService   : Fetching currency rates for base: USD
+2026-03-19T11:02:20.369+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-8] e.i.a.config.RequestLoggingInterceptor   : ← GET /currency | Status: 200 | Time: 219ms
+2026-03-19T11:02:26.864+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-10] e.i.a.config.RequestLoggingInterceptor   : → GET /weather | IP: 0:0:0:0:0:0:0:1 | Params: city=Kyiv
+2026-03-19T11:02:26.865+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-10] e.i.a.controller.WeatherController       : GET /weather - city: Kyiv
+2026-03-19T11:02:26.867+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-10] e.i.apiservice.service.WeatherService    : Fetching weather for city: Kyiv
+2026-03-19T11:02:27.109+02:00  INFO 4792 --- [api-service] [http-nio-8080-exec-10] e.i.a.config.RequestLoggingInterceptor   : ← GET /weather | Status: 200 | Time: 243ms

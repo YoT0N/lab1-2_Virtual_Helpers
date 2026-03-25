@@ -1,6 +1,10 @@
 package edu.ilkiv.telegrambot.handler;
 
+import edu.ilkiv.telegrambot.model.UserProfile;
+import edu.ilkiv.telegrambot.nlp.NlpResult;
+import edu.ilkiv.telegrambot.nlp.NlpService;
 import edu.ilkiv.telegrambot.service.ApiClientService;
+import edu.ilkiv.telegrambot.service.UserProfileService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -9,148 +13,208 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 @Slf4j
 @Component
 public class InfoBot extends TelegramLongPollingBot {
 
     private final ApiClientService api;
+    private final NlpService nlp;               // ЛАБ 3
+    private final UserProfileService profiles;  // ЛАБ 4
 
     @Value("${telegram.bot.username}")
     private String botUsername;
 
-    // ← ВИПРАВЛЕНО: використовуємо \p{L} замість а-яА-Я
-    // \p{L} охоплює ВСІ літери Unicode: і, ї, є, ґ і т.д.
-    private static final Pattern WEATHER_PATTERN =
-            Pattern.compile("(?i)(?:погода|weather|температура)\\s*(?:в|у|in)?\\s*([\\p{L}\\-]+(?:\\s+[\\p{L}\\-]+)*)");
-
-    private static final Pattern CURRENCY_PATTERN =
-            Pattern.compile("(?i)(?:курс|валюта|currency)\\s*([a-zA-Z]{3})?");
-
-    // ← ВИПРАВЛЕНО: після парсингу замінюємо кому на крапку
-    private static final Pattern CONVERT_PATTERN =
-            Pattern.compile("(?i)([\\d]+(?:[.,]\\d+)?)\\s*([a-zA-Z]{3})\\s*(?:в|to|->|у)\\s*([a-zA-Z]{3})");
-
     public InfoBot(ApiClientService api,
+                   NlpService nlp,
+                   UserProfileService profiles,
                    @Value("${telegram.bot.token}") String token) {
         super(token);
         this.api = api;
+        this.nlp = nlp;
+        this.profiles = profiles;
     }
 
     @Override
-    public String getBotUsername() {
-        return botUsername;
-    }
+    public String getBotUsername() { return botUsername; }
 
     @Override
     public void onUpdateReceived(Update update) {
         if (!update.hasMessage() || !update.getMessage().hasText()) return;
 
-        String text  = update.getMessage().getText().trim();
-        long chatId  = update.getMessage().getChatId();
-        String name  = update.getMessage().getFrom().getFirstName();
+        String text = update.getMessage().getText().trim();
+        long chatId = update.getMessage().getChatId();
+        var telegramUser = update.getMessage().getFrom();
 
-        log.info("Повідомлення від {} (chatId={}): {}", name, chatId, text);
+        log.info("Повідомлення від {} (chatId={}): {}", telegramUser.getFirstName(), chatId, text);
 
-        String reply = process(text, name);
+        UserProfile profile = profiles.recordRequest(chatId, telegramUser);
+
+        String reply = process(text, profile, telegramUser);
         send(chatId, reply);
     }
 
-    private String process(String text, String name) {
-        if (text.startsWith("/start"))   return startMessage(name);
-        if (text.startsWith("/help"))    return helpMessage();
+    // Маршрутизація
 
-        if (text.startsWith("/weather")) {
-            String city = arg(text, "/weather");
-            return api.getWeather(city.isEmpty() ? "Kyiv" : city);
+    private String process(String text, UserProfile profile,
+                           org.telegram.telegrambots.meta.api.objects.User telegramUser) {
+
+        // Команди з "/" обробляю напряму
+        if (text.startsWith("/")) {
+            return handleCommand(text, profile);
         }
 
-        if (text.startsWith("/currency")) {
-            String base = arg(text, "/currency");
-            return api.getRates(base.isEmpty() ? "USD" : base.toUpperCase());
-        }
-
-        if (text.startsWith("/convert"))
-            return handleConvert(arg(text, "/convert"));
-
-        return handleFreeText(text);
+        // Весь інший текст через NLP
+        return handleNlp(text, profile);
     }
 
-    private String handleFreeText(String text) {
-        // "100 USD в UAH" або "100,5 USD в UAH"
-        Matcher cm = CONVERT_PATTERN.matcher(text);
-        if (cm.find()) {
-            // ← ВИПРАВЛЕНО: замінюємо кому на крапку перед парсингом
-            double amount = Double.parseDouble(cm.group(1).replace(',', '.'));
-            return api.convert(cm.group(2), cm.group(3), amount);
-        }
+    // Обробка команд
 
-        // "погода в Чернівцях", "погода в Одесі"
-        Matcher wm = WEATHER_PATTERN.matcher(text);
-        if (wm.find()) {
-            String city = wm.group(1);
-            return city != null
-                    ? api.getWeather(city.trim())
-                    : "🌤 Напишіть місто: *погода в Києві* або /weather Kyiv";
-        }
+    private String handleCommand(String text, UserProfile profile) {
+        String cmd = text.split("\\s+")[0].toLowerCase();
+        String arg = text.contains(" ") ? text.substring(text.indexOf(' ') + 1).trim() : "";
 
-        // "курс EUR"
-        Matcher curm = CURRENCY_PATTERN.matcher(text);
-        if (curm.find()) {
-            String base = curm.group(1);
-            return api.getRates(base != null ? base.toUpperCase() : "USD");
-        }
+        return switch (cmd) {
+            case "/start"       -> startMessage(profile);
+            case "/help"        -> helpMessage();
 
-        if (text.matches("(?i)(привіт|hello|hi|добрий день|хай).*"))
-            return "👋 Привіт! Напишіть /help щоб побачити команди.";
+            case "/weather"     -> {
+                // якщо місто не вказано беру з профілю
+                String city = arg.isEmpty() ? profile.getFavoriteCity() : arg;
+                if (city == null || city.isBlank())
+                    yield "🏙 Вкажіть місто або збережіть його: `/setcity Kyiv`";
+                yield api.getWeather(city);
+            }
 
-        return "🤔 Не зрозумів запит.\n\nСпробуйте:\n" +
-                "• /weather Kyiv\n• /currency USD\n• 100 USD в UAH\n• /help";
+            case "/currency"    -> {
+                // якщо валюта не вказана беру з профілю
+                String base = arg.isEmpty() ? profile.getBaseCurrency() : arg.toUpperCase();
+                yield api.getRates(base);
+            }
+
+            case "/convert"     -> handleConvertCommand(arg);
+
+            // команди налаштувань профілю
+            case "/profile"     -> profiles.formatProfile(profile);
+
+            case "/setcity"     -> {
+                if (arg.isBlank())
+                    yield "❓ Вкажіть місто: `/setcity Kyiv`";
+                String normalized = nlp.normalizeCity(arg);
+                profiles.setFavoriteCity(profile.getChatId(), normalized);
+                yield "✅ Улюблене місто збережено: *" + normalized + "*";
+            }
+
+            case "/setcurrency" -> {
+                if (arg.isBlank() || arg.length() != 3)
+                    yield "❓ Вкажіть код валюти: `/setcurrency EUR`";
+                profiles.setBaseCurrency(profile.getChatId(), arg);
+                yield "✅ Базова валюта збережена: *" + arg.toUpperCase() + "*";
+            }
+
+            case "/setlang"     -> {
+                if (!arg.equals("uk") && !arg.equals("en"))
+                    yield "❓ Доступні мови: `uk` (українська) або `en` (англійська)";
+                profiles.setLanguage(profile.getChatId(), arg);
+                yield "uk".equals(arg)
+                        ? "✅ Мову встановлено: 🇺🇦 Українська"
+                        : "✅ Language set: 🇬🇧 English";
+            }
+
+            default -> "❓ Невідома команда. Напишіть /help";
+        };
     }
 
-    private String handleConvert(String args) {
-        Matcher m = Pattern.compile(
-                "(?i)([\\d]+(?:[.,]\\d+)?)\\s+([a-zA-Z]{3})\\s+(?:to|в|у|->)\\s+([a-zA-Z]{3})"
-        ).matcher(args);
-        if (m.find()) {
-            // ← ВИПРАВЛЕНО: замінюємо кому на крапку
-            double amount = Double.parseDouble(m.group(1).replace(',', '.'));
-            return api.convert(m.group(2), m.group(3), amount);
-        }
-        return "❓ Формат: /convert 100 USD to UAH";
+    // NLP обробка вільного тексту
+
+    private String handleNlp(String text, UserProfile profile) {
+        NlpResult result = nlp.analyze(text);
+
+        log.info("NLP результат: intent={}, city={}, currency={}, amount={}",
+                result.getIntent(), result.getCity(),
+                result.getCurrency(), result.getAmount());
+
+        return switch (result.getIntent()) {
+
+            case WEATHER -> {
+                String city = result.hasCity()
+                        ? result.getCity()
+                        : profile.getFavoriteCity();  //fallback на профіль
+                if (city == null)
+                    yield "🏙 Не зрозумів місто. Спробуйте: *погода в Києві*\n" +
+                            "або збережіть місто: `/setcity Kyiv`";
+                yield api.getWeather(city);
+            }
+
+            case CURRENCY -> {
+                String base = result.hasCurrency()
+                        ? result.getCurrency()
+                        : profile.getBaseCurrency();  //fallback на профіль
+                yield api.getRates(base);
+            }
+
+            case CONVERT -> {
+                if (!result.hasCurrency() || !result.hasTargetCurrency())
+                    yield "❓ Не зрозумів конвертацію. Спробуйте: *100 USD в UAH*";
+                double amount = result.hasAmount() ? result.getAmount() : 1.0;
+                yield api.convert(result.getCurrency(), result.getTargetCurrency(), amount);
+            }
+
+            case GET_PROFILE  -> profiles.formatProfile(profile);
+            case GREETING     -> "👋 Привіт, *" + profile.getFirstName() + "*! Напишіть /help.";
+            case HELP         -> helpMessage();
+
+            default -> "🤔 Не зрозумів запит.\n\n" +
+                    "Спробуйте написати природньою мовою:\n" +
+                    "• *яка погода в Одесі?*\n" +
+                    "• *курс долара*\n" +
+                    "• *скільки 200 євро в гривнях?*\n\n" +
+                    "Або використайте /help для списку команд.";
+        };
     }
 
-    private String startMessage(String name) {
+    // Конвертація через команду /convert
+
+    private String handleConvertCommand(String args) {
+        // Спочатку пробуємо через NLP
+        NlpResult result = nlp.analyze(args);
+        if (result.getIntent() == NlpService.Intent.CONVERT
+                && result.hasCurrency() && result.hasTargetCurrency()) {
+            double amount = result.hasAmount() ? result.getAmount() : 1.0;
+            return api.convert(result.getCurrency(), result.getTargetCurrency(), amount);
+        }
+        return "❓ Формат: `/convert 100 USD to UAH` або `/convert 50 євро в гривню`";
+    }
+
+    // Повідомлення
+
+    private String startMessage(UserProfile p) {
         return String.format(
                 "👋 Привіт, *%s*!\n\n" +
-                        "Я інформаційний бот. Можу показати:\n" +
-                        "🌤 Погоду в будь-якому місті\n" +
-                        "💰 Курси валют\n" +
-                        "💱 Конвертацію між валютами\n\n" +
-                        "Напиши /help для деталей!", name);
+                        "Я розумію природній текст — просто пишіть що хочете:\n\n" +
+                        "🌤 *\"яка погода в Харкові?\"*\n" +
+                        "💰 *\"курс євро\"*\n" +
+                        "💱 *\"скільки 100 доларів у гривнях\"*\n\n" +
+                        "Команди: /help | /profile | /setcity | /setcurrency",
+                p.getFirstName());
     }
 
     private String helpMessage() {
         return "📖 *Команди:*\n\n" +
                 "🌤 *Погода*\n" +
-                "`/weather Kyiv` або `погода в Одесі`\n\n" +
+                "`/weather [місто]` або просто _\"погода в Києві\"_\n\n" +
                 "💰 *Курси валют*\n" +
-                "`/currency USD` або `курс EUR`\n\n" +
+                "`/currency [USD]` або _\"курс долара\"_\n\n" +
                 "💱 *Конвертація*\n" +
-                "`/convert 100 USD to UAH` або `100 EUR в PLN`\n\n" +
-                "💡 Можна писати без команд — я розумію вільний текст!";
+                "`/convert 100 USD to UAH` або _\"100 євро в гривні\"_\n\n" +
+                "👤 *Профіль (ЛАБ 4)*\n" +
+                "`/profile` — переглянути профіль\n" +
+                "`/setcity Kyiv` — встановити місто\n" +
+                "`/setcurrency EUR` — базова валюта\n" +
+                "`/setlang uk` або `/setlang en` — мова\n\n" +
+                "💡 *Бот розуміє вільний текст* — команди не обов'язкові!";
     }
 
-    private String arg(String text, String command) {
-        String s = text.substring(command.length()).trim();
-        if (s.startsWith("@")) {
-            int idx = s.indexOf(' ');
-            s = idx > 0 ? s.substring(idx).trim() : "";
-        }
-        return s;
-    }
+    //Відправка повідомлення
 
     private void send(long chatId, String text) {
         try {
@@ -160,7 +224,7 @@ public class InfoBot extends TelegramLongPollingBot {
                     .parseMode("Markdown")
                     .build());
         } catch (TelegramApiException e) {
-            log.error("Помилка відправки повідомлення: {}", e.getMessage());
+            log.error("Помилка відправки: {}", e.getMessage());
         }
     }
 }
