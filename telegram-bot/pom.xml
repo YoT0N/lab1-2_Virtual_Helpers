@@ -15,7 +15,6 @@
 
 	<dependencies>
 
-		<!-- Web -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
@@ -28,30 +27,33 @@
 			<version>6.9.7.1</version>
 		</dependency>
 
-		<!-- ЛАБ 3: OpenNLP — NLP бібліотека для Java від Apache -->
+		<!-- ЛАБ 3: OpenNLP -->
 		<dependency>
 			<groupId>org.apache.opennlp</groupId>
 			<artifactId>opennlp-tools</artifactId>
-			<version>2.3.1</version>
+			<version>2.5.7</version>
 		</dependency>
 
-		<!-- ЛАБ 4: JPA для роботи з базою даних -->
+		<!-- ЛАБ 4,5,6,8: JPA + SQLite -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
-
-		<!-- ЛАБ 4: SQLite драйвер -->
 		<dependency>
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
-			<version>3.45.1.0</version>
+			<version>3.51.3.0</version>
 		</dependency>
-
-		<!-- ЛАБ 4: Hibernate діалект для SQLite -->
 		<dependency>
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-community-dialects</artifactId>
+		</dependency>
+
+		<!-- ЛАБ 6: iCal4j для роботи з .ics календарем -->
+		<dependency>
+			<groupId>org.mnode.ical4j</groupId>
+			<artifactId>ical4j</artifactId>
+			<version>3.2.19</version>
 		</dependency>
 
 	</dependencies>
