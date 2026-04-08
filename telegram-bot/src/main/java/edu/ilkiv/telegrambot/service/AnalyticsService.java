@@ -17,7 +17,7 @@ import java.util.List;
  *   - Збереження кожного запиту в БД
  *   - Статистика за день/тиждень
  *   - Визначення найпопулярніших команд
- *   - Генерація CSV звіту
+ *   - Генерація CSV звіту у вигляді байт (для відправки файлом через бота)
  */
 @Slf4j
 @Service
@@ -51,6 +51,7 @@ public class AnalyticsService {
      * Сформувати текстовий звіт статистики.
      * /stats — за останній тиждень
      * /stats day — за сьогодні
+     * /stats month — за місяць
      */
     public String getStats(String period) {
         long from;
@@ -59,12 +60,13 @@ public class AnalyticsService {
         if ("day".equalsIgnoreCase(period)) {
             from = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
             periodLabel = "сьогодні";
-        } else if ("week".equalsIgnoreCase(period) || period == null || period.isBlank()) {
-            from = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000;
-            periodLabel = "за 7 днів";
-        } else {
+        } else if ("month".equalsIgnoreCase(period)) {
             from = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
             periodLabel = "за 30 днів";
+        } else {
+            // week або порожньо
+            from = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000;
+            periodLabel = "за 7 днів";
         }
 
         List<Object[]> byType = repository.countByTypeAfter(from);
@@ -93,16 +95,19 @@ public class AnalyticsService {
 
         sb.append("\n_/stats day — за сьогодні_\n");
         sb.append("_/stats month — за місяць_\n");
-        sb.append("_/exportcsv — завантажити звіт_");
+        sb.append("_/exportcsv — завантажити CSV файл_");
 
         return sb.toString();
     }
 
     /**
-     * Генерація CSV звіту за останній тиждень.
-     * Повертає текст CSV для відправки як повідомлення.
+     * Генерація CSV звіту — повертає байти файлу.
+     * Використовується в InfoBot для відправки через sendDocument().
+     *
+     * @param period "day" або будь-що інше (тиждень)
+     * @return масив байт CSV файлу, або null якщо даних немає
      */
-    public String exportCsv(String period) {
+    public byte[] exportCsvBytes(String period) {
         long from;
         if ("day".equalsIgnoreCase(period)) {
             from = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
@@ -113,25 +118,53 @@ public class AnalyticsService {
         List<RequestLog> logs = repository.findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(from);
 
         if (logs.isEmpty()) {
-            return "📭 Немає даних для експорту.";
+            return null;
         }
 
         StringBuilder csv = new StringBuilder();
-        csv.append("id,chat_id,username,request_type,result,duration_ms,created_at\n");
+        // BOM для коректного відображення UTF-8 в Excel
+        csv.append("\uFEFF");
+        csv.append("id,chat_id,username,request_type,request_text,result,duration_ms,created_at\n");
 
         for (RequestLog r : logs) {
             LocalDateTime dt = LocalDateTime.ofInstant(
                     Instant.ofEpochMilli(r.getCreatedAt()), ZoneId.systemDefault());
+
+            // Екрануємо поля що можуть містити коми або лапки
+            String requestText = r.getRequestText() != null
+                    ? "\"" + r.getRequestText().replace("\"", "\"\"") + "\""
+                    : "";
+            String username = r.getUsername() != null ? r.getUsername() : "";
+
             csv.append(r.getId()).append(",")
                     .append(r.getChatId()).append(",")
-                    .append(r.getUsername() != null ? r.getUsername() : "").append(",")
+                    .append(escapeCsv(username)).append(",")
                     .append(r.getRequestType()).append(",")
+                    .append(requestText).append(",")
                     .append(r.getResult()).append(",")
                     .append(r.getDurationMs()).append(",")
                     .append(dt.format(DT_FORMAT)).append("\n");
         }
 
-        return "```\n" + csv + "\n```\n_Скопіюйте і збережіть як_ `report.csv`";
+        return csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Залишаємо для сумісності — тепер повертає лише підтвердження.
+     * Реальний експорт йде через exportCsvBytes().
+     */
+    public String exportCsv(String period) {
+        // Цей метод більше не використовується напряму — InfoBot викликає exportCsvBytes()
+        // Залишено для зворотньої сумісності
+        return "_Формується файл..._";
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 
     private String getEmoji(String type) {

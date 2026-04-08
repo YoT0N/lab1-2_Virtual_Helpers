@@ -10,9 +10,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.io.ByteArrayInputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Головний обробник Telegram бота.
@@ -22,12 +28,12 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
  * ЛАБ 4:   Профіль користувача (SQLite)
  * ЛАБ 5:   Нагадування з планувальником (@Scheduled)
  * ЛАБ 6:   Календар подій + .ics експорт
- * ЛАБ 7:   Переклад (uk/en/de) через LibreTranslate
- * ЛАБ 8:   Логування запитів + аналітика + CSV звіт
+ * ЛАБ 7:   Переклад (en/de/it) офлайн-словниками
+ * ЛАБ 8:   Логування запитів + аналітика + CSV файл
  */
 @Slf4j
 @Component
-@EnableScheduling  // ← ЛАБ 5: вмикаємо планувальник для нагадувань
+@EnableScheduling
 public class InfoBot extends TelegramLongPollingBot {
 
     private final ApiClientService api;
@@ -55,10 +61,6 @@ public class InfoBot extends TelegramLongPollingBot {
         this.analytics = analytics;
     }
 
-    /**
-     * ЛАБ 5: Після старту передаємо боту callback для відправки нагадувань.
-     * ReminderService сам не може відправляти — йому потрібен доступ до execute().
-     */
     @PostConstruct
     public void init() {
         reminders.setMessageSender(this::send);
@@ -82,24 +84,31 @@ public class InfoBot extends TelegramLongPollingBot {
 
         long startTime = System.currentTimeMillis();
         String requestType = detectRequestType(text);
-        String reply;
 
         try {
-            reply = process(text, profile);
-            // ЛАБ 8: логуємо успішний запит
+            // Перевіряємо чи це /exportcsv — обробляємо окремо (відправка файлу)
+            if (text.toLowerCase().startsWith("/exportcsv")) {
+                String arg = text.contains(" ") ? text.substring(text.indexOf(' ') + 1).trim() : "";
+                handleExportCsv(chatId, arg);
+                analytics.logRequest(chatId, telegramUser.getUserName(),
+                        "ANALYTICS", text, "SUCCESS",
+                        System.currentTimeMillis() - startTime);
+                return;
+            }
+
+            String reply = process(text, profile);
             analytics.logRequest(chatId, telegramUser.getUserName(),
                     requestType, text, "SUCCESS",
                     System.currentTimeMillis() - startTime);
+            send(chatId, reply);
+
         } catch (Exception e) {
             log.error("Помилка обробки запиту: {}", e.getMessage(), e);
-            reply = "❌ Внутрішня помилка. Спробуйте ще раз.";
-            // ЛАБ 8: логуємо помилку
+            send(chatId, "❌ Внутрішня помилка. Спробуйте ще раз.");
             analytics.logRequest(chatId, telegramUser.getUserName(),
                     requestType, text, "ERROR",
                     System.currentTimeMillis() - startTime);
         }
-
-        send(chatId, reply);
     }
 
     // ── Маршрутизація ─────────────────────────────────────────────────────
@@ -109,11 +118,9 @@ public class InfoBot extends TelegramLongPollingBot {
             return handleCommand(text, profile);
         }
 
-        // ЛАБ 7: перевіряємо чи це запит на переклад вільним текстом
         String translationResult = translator.translateFreeText(text);
         if (translationResult != null) return translationResult;
 
-        // ЛАБ 3: NLP для всього іншого
         return handleNlp(text, profile);
     }
 
@@ -183,10 +190,46 @@ public class InfoBot extends TelegramLongPollingBot {
 
             // ── Аналітика (ЛАБ 8) ─────────────────────────────────────────
             case "/stats"      -> analytics.getStats(arg);
-            case "/exportcsv"  -> analytics.exportCsv(arg);
+            // /exportcsv обробляється окремо в onUpdateReceived (відправляє файл)
+            case "/exportcsv"  -> "⏳ Формується файл...";
 
             default -> "❓ Невідома команда. /help";
         };
+    }
+
+    // ── ЛАБ 8: Відправка CSV як файлу ────────────────────────────────────
+
+    /**
+     * Формує CSV і відправляє як документ (файл) в Telegram.
+     */
+    private void handleExportCsv(long chatId, String period) {
+        byte[] csvBytes = analytics.exportCsvBytes(period);
+
+        if (csvBytes == null) {
+            send(chatId, "📭 Немає даних для експорту.");
+            return;
+        }
+
+        // Ім'я файлу з датою
+        String fileName = "report_" +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm")) +
+                ".csv";
+
+        try {
+            SendDocument doc = SendDocument.builder()
+                    .chatId(String.valueOf(chatId))
+                    .document(new InputFile(new ByteArrayInputStream(csvBytes), fileName))
+                    .caption("📊 *Звіт запитів*\n_" + fileName + "_")
+                    .parseMode("Markdown")
+                    .build();
+
+            execute(doc);
+            log.info("CSV файл '{}' відправлено для chatId={}", fileName, chatId);
+
+        } catch (TelegramApiException e) {
+            log.error("Помилка відправки CSV файлу: {}", e.getMessage());
+            send(chatId, "❌ Не вдалося відправити файл.");
+        }
     }
 
     // ── NLP (ЛАБ 3) ───────────────────────────────────────────────────────
@@ -279,16 +322,18 @@ public class InfoBot extends TelegramLongPollingBot {
                 "`/events` — найближчі | `/events 25.03` — за датою\n" +
                 "`/delevent <id>` | `/exportics` — .ics файл\n\n" +
                 "🌐 *Переклад (Лаб 7)*\n" +
-                "`/translate en Привіт` | `/translate de Як справи?`\n" +
+                "`/translate en Привіт` — 🇬🇧 англійська\n" +
+                "`/translate de Як справи?` — 🇩🇪 німецька\n" +
+                "`/translate it Дякую` — 🇮🇹 італійська\n" +
                 "Або: _переклади на англійську: текст_\n\n" +
                 "📊 *Аналітика (Лаб 8)*\n" +
                 "`/stats` — тижнева статистика\n" +
                 "`/stats day` — за сьогодні\n" +
-                "`/exportcsv` — CSV звіт\n\n" +
+                "`/exportcsv` — CSV файл (завантаження)\n\n" +
                 "💡 Бот розуміє вільний текст!";
     }
 
-    // ── Відправка ─────────────────────────────────────────────────────────
+    // ── Відправка тексту ──────────────────────────────────────────────────
 
     private void send(long chatId, String text) {
         try {
