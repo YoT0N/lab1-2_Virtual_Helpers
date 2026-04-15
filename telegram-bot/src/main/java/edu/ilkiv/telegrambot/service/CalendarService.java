@@ -12,16 +12,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * ЛАБ 6 — Сервіс календаря.
- *
- * Підтримує команди:
- *   /addevent 25.03 14:00 Назва події
- *   /events           — найближчі події
- *   /events 25.03     — події на конкретну дату
- *   /delevent <id>    — видалення події
- *   /exportics        — текстовий .ics формат
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -44,9 +35,7 @@ public class CalendarService {
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
 
-    /**
-     * Створити подію.
-     */
+
     public String addEvent(Long chatId, String args) {
         if (args.isBlank()) {
             return """
@@ -108,9 +97,7 @@ public class CalendarService {
         }
     }
 
-    /**
-     * Показати найближчі події або події на конкретну дату.
-     */
+
     public String listEvents(Long chatId, String dateFilter) {
         List<CalendarEvent> events;
         long now = System.currentTimeMillis();
@@ -151,9 +138,7 @@ public class CalendarService {
         return sb.toString();
     }
 
-    /**
-     * Видалення події.
-     */
+
     public String deleteEvent(Long chatId, String idStr) {
         try {
             long id = Long.parseLong(idStr.trim());
@@ -168,9 +153,7 @@ public class CalendarService {
         }
     }
 
-    /**
-     * Експорт подій у .ics формат (текстовий вивід).
-     */
+
     public String exportIcs(Long chatId) {
         long now = System.currentTimeMillis();
         List<CalendarEvent> events = repository

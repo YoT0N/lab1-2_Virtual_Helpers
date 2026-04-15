@@ -7,24 +7,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * ЛАБ 7 — Сервіс перекладу (офлайн через словникову транслітерацію + словники).
- *
- * Використовує бібліотеку Apache OpenNLP (вже є в залежностях) для
- * визначення мови та просту словникову систему для перекладу базових фраз.
- *
- * Підтримувані мови: en (англійська), de (німецька), it (італійська).
- *
- * Для повноцінного офлайн перекладу рекомендується замінити на
- * бібліотеку Argos Translate (Python) або використати DL4J модель.
- * Тут реалізовано легковагу офлайн-заміну без зовнішніх API.
- *
- * Команди:
- *   /translate en Привіт світ          → переклад на англійську
- *   /translate de Як справи?           → переклад на німецьку
- *   /translate it Добрий день          → переклад на італійську
- *   Переклади на англійську: Привіт    → вільний текст (NLP)
- */
+
 @Slf4j
 @Service
 public class TranslationService {
@@ -227,10 +210,6 @@ public class TranslationService {
 
     // ── Публічні методи ───────────────────────────────────────────────────
 
-    /**
-     * Переклад через команду /translate.
-     * Формат args: "en текст" | "de текст" | "it текст"
-     */
     public String translate(String args) {
         if (args.isBlank()) {
             return buildHelpMessage();
@@ -251,11 +230,7 @@ public class TranslationService {
         return doTranslate(text, targetLang);
     }
 
-    /**
-     * Переклад з вільного тексту (NLP).
-     * Наприклад: "переклади на англійську: Добрий день"
-     * або:       "переклади на англійську текст: Добрий день"
-     */
+
     public String translateFreeText(String text) {
         Matcher m = FREE_TEXT_PATTERN.matcher(text);
         if (!m.find()) return null;
@@ -278,10 +253,7 @@ public class TranslationService {
 
     // ── Внутрішні методи ──────────────────────────────────────────────────
 
-    /**
-     * Офлайн переклад через словники.
-     * Логіка: шукаємо фрази в словнику від довших до коротших (greedy match).
-     */
+
     private String doTranslate(String text, String targetLang) {
         log.info("Переклад: auto -> {}, текст: '{}'", targetLang, text);
 

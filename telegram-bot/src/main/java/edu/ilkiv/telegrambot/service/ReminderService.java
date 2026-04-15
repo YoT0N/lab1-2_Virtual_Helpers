@@ -14,14 +14,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * ЛАБ 5 — Сервіс нагадувань.
- *
- * Підтримує формати:
- *   /remind 25.03 15:30 Зустріч з командою
- *   /remind завтра 9:00 Лекція
- *   /remind через 2 години Подзвонити
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -59,10 +52,7 @@ public class ReminderService {
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
 
-    /**
-     * Парсить аргументи команди /remind і створює нагадування.
-     * Повертає повідомлення для користувача.
-     */
+
     public String createReminder(Long chatId, String args) {
         if (args.isBlank()) {
             return """
@@ -143,9 +133,7 @@ public class ReminderService {
         }
     }
 
-    /**
-     * Список активних нагадувань користувача.
-     */
+
     public String listReminders(Long chatId) {
         List<Reminder> reminders = repository
                 .findByChatIdAndSentFalseOrderByRemindAtAsc(chatId);
@@ -166,9 +154,7 @@ public class ReminderService {
         return sb.toString();
     }
 
-    /**
-     * Видалення нагадування за ID.
-     */
+
     public String deleteReminder(Long chatId, String idStr) {
         try {
             long id = Long.parseLong(idStr.trim());
@@ -185,10 +171,7 @@ public class ReminderService {
         }
     }
 
-    /**
-     * ЛАБ 5: Scheduler — перевіряє кожні 30 секунд чи є нагадування що настав час.
-     * @Scheduled(fixedDelay = 30000) = кожні 30 секунд після завершення попереднього виконання.
-     */
+
     @Scheduled(fixedDelay = 30000)
     public void checkReminders() {
         if (messageSender == null) return;

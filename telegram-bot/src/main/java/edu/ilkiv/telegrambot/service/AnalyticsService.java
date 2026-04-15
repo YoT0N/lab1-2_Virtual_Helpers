@@ -10,15 +10,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * ЛАБ 8 — Сервіс аналітики та логування запитів.
- *
- * Функції:
- *   - Збереження кожного запиту в БД
- *   - Статистика за день/тиждень
- *   - Визначення найпопулярніших команд
- *   - Генерація CSV звіту у вигляді байт (для відправки файлом через бота)
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
