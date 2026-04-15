@@ -10,13 +10,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.methods.send.SendVoice;
+import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.io.ByteArrayInputStream;
+import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -30,6 +34,8 @@ import java.time.format.DateTimeFormatter;
  * ЛАБ 6:   Календар подій + .ics експорт
  * ЛАБ 7:   Переклад (en/de/it) офлайн-словниками
  * ЛАБ 8:   Логування запитів + аналітика + CSV файл
+ * ЛАБ 9:   Голосові повідомлення (STT + TTS)
+ * ЛАБ 10:  Офлайн NLL + керування системою
  */
 @Slf4j
 @Component
@@ -39,32 +45,47 @@ public class InfoBot extends TelegramLongPollingBot {
     private final ApiClientService api;
     private final NlpService nlp;
     private final UserProfileService profiles;
-    private final ReminderService reminders;     // ЛАБ 5
-    private final CalendarService calendar;      // ЛАБ 6
-    private final TranslationService translator; // ЛАБ 7
-    private final AnalyticsService analytics;    // ЛАБ 8
+    private final ReminderService reminders;
+    private final CalendarService calendar;
+    private final TranslationService translator;
+    private final AnalyticsService analytics;
+    // ЛАБ 9
+    private final VoiceService voice;
+    // ЛАБ 10
+    private final SystemControlService system;
+    private final NllService nll;
 
     @Value("${telegram.bot.username}")
     private String botUsername;
 
+    @Value("${telegram.bot.token}")
+    private String botToken;
+
+    @Value("${voice.reply.with.voice:false}")
+    private boolean replyWithVoice;
+
     public InfoBot(ApiClientService api, NlpService nlp, UserProfileService profiles,
                    ReminderService reminders, CalendarService calendar,
                    TranslationService translator, AnalyticsService analytics,
+                   VoiceService voice, SystemControlService system, NllService nll,
                    @Value("${telegram.bot.token}") String token) {
         super(token);
-        this.api = api;
-        this.nlp = nlp;
-        this.profiles = profiles;
-        this.reminders = reminders;
-        this.calendar = calendar;
+        this.api        = api;
+        this.nlp        = nlp;
+        this.profiles   = profiles;
+        this.reminders  = reminders;
+        this.calendar   = calendar;
         this.translator = translator;
-        this.analytics = analytics;
+        this.analytics  = analytics;
+        this.voice      = voice;
+        this.system     = system;
+        this.nll        = nll;
     }
 
     @PostConstruct
     public void init() {
         reminders.setMessageSender(this::send);
-        log.info("InfoBot ініціалізовано з усіма сервісами (лаб 1-8)");
+        log.info("InfoBot ініціалізовано з усіма сервісами (лаб 1-10)");
     }
 
     @Override
@@ -72,21 +93,30 @@ public class InfoBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (!update.hasMessage() || !update.getMessage().hasText()) return;
+        if (!update.hasMessage()) return;
 
-        String text = update.getMessage().getText().trim();
-        long chatId = update.getMessage().getChatId();
-        var telegramUser = update.getMessage().getFrom();
-
-        log.info("Повідомлення від {} (chatId={}): {}", telegramUser.getFirstName(), chatId, text);
+        Message msg = update.getMessage();
+        long chatId = msg.getChatId();
+        User telegramUser = msg.getFrom();
 
         UserProfile profile = profiles.recordRequest(chatId, telegramUser);
-
         long startTime = System.currentTimeMillis();
-        String requestType = detectRequestType(text);
 
         try {
-            // Перевіряємо чи це /exportcsv — обробляємо окремо (відправка файлу)
+            // ── ЛАБ 9: Голосове повідомлення ────────────────────────────────
+            if (msg.hasVoice()) {
+                handleVoiceMessage(msg, chatId, telegramUser, profile, startTime);
+                return;
+            }
+
+            if (!msg.hasText()) return;
+
+            String text = msg.getText().trim();
+            log.info("Повідомлення від {} (chatId={}): {}", telegramUser.getFirstName(), chatId, text);
+
+            String requestType = detectRequestType(text);
+
+            // /exportcsv — окрема обробка (відправляє файл)
             if (text.toLowerCase().startsWith("/exportcsv")) {
                 String arg = text.contains(" ") ? text.substring(text.indexOf(' ') + 1).trim() : "";
                 handleExportCsv(chatId, arg);
@@ -96,37 +126,183 @@ public class InfoBot extends TelegramLongPollingBot {
                 return;
             }
 
-            String reply = process(text, profile);
+            String reply = process(text, chatId, profile);
             analytics.logRequest(chatId, telegramUser.getUserName(),
                     requestType, text, "SUCCESS",
                     System.currentTimeMillis() - startTime);
-            send(chatId, reply);
+
+            // ── ЛАБ 9: Відповідь голосом якщо увімкнено ─────────────────────
+            if (replyWithVoice && shouldSendVoice(text)) {
+                sendVoiceReply(chatId, reply);
+            } else {
+                send(chatId, reply);
+            }
 
         } catch (Exception e) {
             log.error("Помилка обробки запиту: {}", e.getMessage(), e);
             send(chatId, "❌ Внутрішня помилка. Спробуйте ще раз.");
             analytics.logRequest(chatId, telegramUser.getUserName(),
-                    requestType, text, "ERROR",
+                    "ERROR", msg.hasText() ? msg.getText() : "voice", "ERROR",
                     System.currentTimeMillis() - startTime);
         }
     }
 
-    // ── Маршрутизація ─────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    //  ЛАБ 9: Голосові повідомлення
+    // ═══════════════════════════════════════════════════════════════════════
 
-    private String process(String text, UserProfile profile) {
+    /**
+     * Обробляє голосове повідомлення:
+     * 1. Завантажує OGG файл з Telegram
+     * 2. Розпізнає мовлення через Vosk (STT)
+     * 3. Обробляє текст як звичайне повідомлення
+     * 4. Відповідає текстом (і голосом якщо replyWithVoice=true)
+     */
+    private void handleVoiceMessage(Message msg, long chatId, User telegramUser,
+                                    UserProfile profile, long startTime) {
+        send(chatId, "🎙 Розпізнаю мовлення...");
+
+        try {
+            // Крок 1: Завантаження файлу
+            byte[] oggBytes = downloadVoiceFile(msg.getVoice().getFileId());
+            if (oggBytes == null) {
+                send(chatId, "❌ Не вдалося завантажити аудіофайл.");
+                return;
+            }
+
+            // Крок 2: STT — Vosk
+            String recognizedText = voice.speechToText(oggBytes);
+
+            if (recognizedText == null || recognizedText.isBlank()) {
+                send(chatId, "🤔 Не вдалося розпізнати мовлення.\n\n" +
+                        "Переконайтеся що:\n" +
+                        "• Встановлено Vosk та ffmpeg\n" +
+                        "• Завантажено мовну модель (`/voicestatus`)\n" +
+                        "• Аудіо записано чітко");
+                return;
+            }
+
+            log.info("Розпізнано голос: '{}'", recognizedText);
+
+            // Крок 3: Відображаємо розпізнаний текст
+            send(chatId, "🎙 Розпізнано: _\"" + recognizedText + "\"_");
+
+            // Крок 4: Обробляємо як звичайне повідомлення
+            String reply = process(recognizedText, chatId, profile);
+
+            analytics.logRequest(chatId, telegramUser.getUserName(),
+                    "VOICE_" + detectRequestType(recognizedText),
+                    recognizedText, "SUCCESS",
+                    System.currentTimeMillis() - startTime);
+
+            // Крок 5: Відповідь (голосом або текстом)
+            if (replyWithVoice) {
+                sendVoiceReply(chatId, reply);
+            } else {
+                send(chatId, reply);
+            }
+
+        } catch (Exception e) {
+            log.error("Помилка обробки голосу: {}", e.getMessage(), e);
+            send(chatId, "❌ Помилка розпізнавання: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Завантажує OGG файл голосового повідомлення з серверів Telegram.
+     */
+    private byte[] downloadVoiceFile(String fileId) {
+        try {
+            GetFile getFile = new GetFile(fileId);
+            File telegramFile = execute(getFile);
+            String filePath = telegramFile.getFilePath();
+            String fileUrl = "https://api.telegram.org/file/bot" + botToken + "/" + filePath;
+
+            try (InputStream is = new URL(fileUrl).openStream()) {
+                return is.readAllBytes();
+            }
+        } catch (Exception e) {
+            log.error("Помилка завантаження голосу: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Синтезує відповідь у голос і відправляє як Voice Message.
+     */
+    private void sendVoiceReply(long chatId, String text) {
+        // Спочатку відправляємо текст
+        send(chatId, text);
+
+        // Потім синтезуємо та відправляємо голос
+        try {
+            byte[] wavBytes = voice.textToSpeech(text);
+            if (wavBytes == null) {
+                log.warn("TTS повернув null для тексту довжиною {}", text.length());
+                return;
+            }
+
+            byte[] oggBytes = voice.wavToOgg(wavBytes);
+            if (oggBytes == null) {
+                log.warn("Конвертація WAV→OGG не вдалась");
+                return;
+            }
+
+            SendVoice sendVoice = SendVoice.builder()
+                    .chatId(String.valueOf(chatId))
+                    .voice(new InputFile(
+                            new java.io.ByteArrayInputStream(oggBytes),
+                            "response.ogg"))
+                    .build();
+            execute(sendVoice);
+            log.info("Голосову відповідь відправлено: {} байт", oggBytes.length);
+
+        } catch (Exception e) {
+            log.error("Помилка відправки голосу: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Визначає чи треба відповідати голосом на цей запит
+     * (голосові запити завжди отримують голосову відповідь,
+     * звичайні текстові — тільки якщо replyWithVoice=true).
+     */
+    private boolean shouldSendVoice(String text) {
+        // Не відправляємо голос для довгих відповідей (списки, статистика)
+        return !text.startsWith("/stats") &&
+                !text.startsWith("/reminders") &&
+                !text.startsWith("/events") &&
+                !text.startsWith("/mycommands");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Маршрутизація
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private String process(String text, long chatId, UserProfile profile) {
         if (text.startsWith("/")) {
-            return handleCommand(text, profile);
+            return handleCommand(text, chatId, profile);
         }
 
+        // ЛАБ 10: NLL — перевіряємо навчені команди та вбудовані асоціації
+        NllService.NllResult nllResult = nll.recognize(chatId, text);
+        if (nllResult != null) {
+            return handleNllIntent(nllResult, chatId, profile);
+        }
+
+        // ЛАБ 7: Переклад вільним текстом
         String translationResult = translator.translateFreeText(text);
         if (translationResult != null) return translationResult;
 
+        // ЛАБ 3: NLP
         return handleNlp(text, profile);
     }
 
-    // ── Обробка команд ────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Обробка команд
+    // ═══════════════════════════════════════════════════════════════════════
 
-    private String handleCommand(String text, UserProfile profile) {
+    private String handleCommand(String text, long chatId, UserProfile profile) {
         String cmd = text.split("\\s+")[0].toLowerCase();
         String arg = text.contains(" ") ? text.substring(text.indexOf(' ') + 1).trim() : "";
 
@@ -190,18 +366,73 @@ public class InfoBot extends TelegramLongPollingBot {
 
             // ── Аналітика (ЛАБ 8) ─────────────────────────────────────────
             case "/stats"      -> analytics.getStats(arg);
-            // /exportcsv обробляється окремо в onUpdateReceived (відправляє файл)
-            case "/exportcsv"  -> "⏳ Формується файл...";
+            case "/exportcsv"  -> "⏳ Формується файл..."; // обробляється в onUpdateReceived
+
+            // ── Голос (ЛАБ 9) ─────────────────────────────────────────────
+            case "/voicestatus" -> voice.checkDependencies();
+            case "/voiceon"     -> {
+                // Активація голосових відповідей (зберігаємо в профілі через флаг)
+                yield "🎙 Голосові відповіді: спробуйте надіслати голосове повідомлення!";
+            }
+            case "/tts"         -> {
+                if (arg.isBlank()) yield "❓ `/tts Текст для синтезу мовлення`";
+                sendVoiceReply(chatId, arg);
+                yield "🔊 Синтезую мовлення...";
+            }
+
+            // ── Система (ЛАБ 10) ──────────────────────────────────────────
+            case "/launch"     -> system.launchApp(arg);
+            case "/sysinfo"    -> system.getSystemInfo();
+            case "/network"    -> system.getNetworkInfo();
+            case "/volume"     -> system.setVolume(arg);
+            case "/note"       -> system.createNote(chatId, arg);
+            case "/notes"      -> system.listNotes(chatId);
+            case "/readnote"   -> system.readNote(chatId, arg);
+            case "/delnote"    -> system.deleteNote(chatId, arg);
+
+            // ── NLL (ЛАБ 10) ──────────────────────────────────────────────
+            case "/learn"       -> nll.learn(chatId, arg);
+            case "/mycommands"  -> nll.listCommands(chatId);
+            case "/forgetcmd"   -> nll.forgetCommand(chatId, arg);
+            case "/nllstats"    -> nll.getStats(chatId);
 
             default -> "❓ Невідома команда. /help";
         };
     }
 
-    // ── ЛАБ 8: Відправка CSV як файлу ────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    //  ЛАБ 10: Обробка NLL намірів
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Формує CSV і відправляє як документ (файл) в Telegram.
-     */
+    private String handleNllIntent(NllService.NllResult result, long chatId, UserProfile profile) {
+        log.info("NLL намір: {} (дія: {})", result.getIntent(), result.getAction());
+
+        return switch (result.getIntent()) {
+            case "LAUNCH_BROWSER"  -> system.launchApp("browser");
+            case "LAUNCH_NOTEPAD"  -> system.launchApp("notepad");
+            case "LAUNCH_CALC"     -> system.launchApp("calculator");
+            case "LAUNCH_TERMINAL" -> system.launchApp("terminal");
+            case "LAUNCH_FILES"    -> system.launchApp("files");
+            case "SYSTEM_INFO"     -> system.getSystemInfo();
+            case "NETWORK_INFO"    -> system.getNetworkInfo();
+            case "CREATE_NOTE"     -> "📝 Що записати? Напишіть: `/note Текст нотатки`";
+            case "LIST_NOTES"      -> system.listNotes(chatId);
+
+            // Якщо є кастомна дія (напр. URL)
+            default -> {
+                if (result.getAction() != null && !result.getAction().isBlank()) {
+                    yield "🚀 Виконую: *" + result.getIntent() + "*\n\n_" + result.getAction() + "_";
+                }
+                // Fallback — спробуємо як NLP
+                yield handleNlp(result.getIntent().toLowerCase(), profile);
+            }
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  ЛАБ 8: CSV Export
+    // ═══════════════════════════════════════════════════════════════════════
+
     private void handleExportCsv(long chatId, String period) {
         byte[] csvBytes = analytics.exportCsvBytes(period);
 
@@ -210,7 +441,6 @@ public class InfoBot extends TelegramLongPollingBot {
             return;
         }
 
-        // Ім'я файлу з датою
         String fileName = "report_" +
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm")) +
                 ".csv";
@@ -218,28 +448,24 @@ public class InfoBot extends TelegramLongPollingBot {
         try {
             SendDocument doc = SendDocument.builder()
                     .chatId(String.valueOf(chatId))
-                    .document(new InputFile(new ByteArrayInputStream(csvBytes), fileName))
+                    .document(new InputFile(
+                            new java.io.ByteArrayInputStream(csvBytes), fileName))
                     .caption("📊 *Звіт запитів*\n_" + fileName + "_")
                     .parseMode("Markdown")
                     .build();
-
             execute(doc);
-            log.info("CSV файл '{}' відправлено для chatId={}", fileName, chatId);
-
         } catch (TelegramApiException e) {
-            log.error("Помилка відправки CSV файлу: {}", e.getMessage());
+            log.error("Помилка відправки CSV: {}", e.getMessage());
             send(chatId, "❌ Не вдалося відправити файл.");
         }
     }
 
-    // ── NLP (ЛАБ 3) ───────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    //  ЛАБ 3: NLP
+    // ═══════════════════════════════════════════════════════════════════════
 
     private String handleNlp(String text, UserProfile profile) {
         NlpResult result = nlp.analyze(text);
-
-        log.info("NLP: intent={}, city={}, currency={}, amount={}",
-                result.getIntent(), result.getCity(),
-                result.getCurrency(), result.getAmount());
 
         return switch (result.getIntent()) {
             case WEATHER -> {
@@ -263,11 +489,10 @@ public class InfoBot extends TelegramLongPollingBot {
             case HELP        -> helpMessage();
             default -> "🤔 Не зрозумів.\n\nСпробуйте:\n" +
                     "• _погода в Одесі_\n• _курс євро_\n" +
-                    "• _100 USD в UAH_\n• _переклади на англійську: текст_\n• /help";
+                    "• _100 USD в UAH_\n• _переклади на англійську: текст_\n" +
+                    "• _відкрий браузер_\n• /help";
         };
     }
-
-    // ── Конвертація через команду ─────────────────────────────────────────
 
     private String handleConvertCommand(String args) {
         NlpResult result = nlp.analyze(args);
@@ -279,7 +504,9 @@ public class InfoBot extends TelegramLongPollingBot {
         return "❓ Формат: `/convert 100 USD to UAH`";
     }
 
-    // ── Визначення типу запиту для логування (ЛАБ 8) ─────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Повідомлення
+    // ═══════════════════════════════════════════════════════════════════════
 
     private String detectRequestType(String text) {
         String lower = text.toLowerCase();
@@ -287,53 +514,59 @@ public class InfoBot extends TelegramLongPollingBot {
         if (lower.startsWith("/currency") || lower.contains("курс")) return "CURRENCY";
         if (lower.startsWith("/convert") || lower.contains(" в ")) return "CONVERT";
         if (lower.startsWith("/remind")) return "REMINDER";
-        if (lower.startsWith("/addevent") || lower.startsWith("/events") || lower.startsWith("/delevent")) return "CALENDAR";
+        if (lower.startsWith("/addevent") || lower.startsWith("/events")) return "CALENDAR";
         if (lower.startsWith("/translate") || lower.contains("переклад")) return "TRANSLATE";
         if (lower.startsWith("/profile") || lower.startsWith("/set")) return "PROFILE";
         if (lower.startsWith("/stats") || lower.startsWith("/exportcsv")) return "ANALYTICS";
+        if (lower.startsWith("/launch") || lower.startsWith("/sysinfo") || lower.contains("відкрий")) return "SYSTEM";
+        if (lower.startsWith("/learn") || lower.startsWith("/mycommands")) return "NLL";
         return "OTHER";
     }
-
-    // ── Повідомлення ──────────────────────────────────────────────────────
 
     private String startMessage(UserProfile p) {
         return String.format(
                 "👋 Привіт, *%s*!\n\n" +
-                        "Я розумію природній текст. Просто пишіть:\n\n" +
+                        "Я розумію природній текст і голосові команди. Спробуйте:\n\n" +
                         "🌤 _яка погода в Харкові?_\n" +
                         "💰 _курс євро_\n" +
                         "💱 _100 доларів у гривні_\n" +
-                        "🌐 _переклади на англійську: Добрий день_\n\n" +
+                        "🌐 _переклади на англійську: Добрий день_\n" +
+                        "🚀 _відкрий браузер_\n" +
+                        "🎙 Або надішліть *голосове повідомлення*!\n\n" +
                         "/help — всі команди", p.getFirstName());
     }
 
     private String helpMessage() {
         return "📖 *Всі команди:*\n\n" +
-                "🌤 *Погода*\n`/weather [місто]` або _погода в Києві_\n\n" +
-                "💰 *Курси валют*\n`/currency [USD]` або _курс долара_\n\n" +
-                "💱 *Конвертація*\n`/convert 100 USD to UAH` або _100 євро в злотих_\n\n" +
+                "🌤 *Погода*\n`/weather [місто]`\n\n" +
+                "💰 *Курси валют*\n`/currency [USD]`\n\n" +
+                "💱 *Конвертація*\n`/convert 100 USD to UAH`\n\n" +
                 "👤 *Профіль (Лаб 4)*\n`/profile` | `/setcity` | `/setcurrency` | `/setlang`\n\n" +
                 "🔔 *Нагадування (Лаб 5)*\n" +
-                "`/remind завтра 9:00 Лекція`\n" +
-                "`/remind через 30 хвилин Подзвонити`\n" +
-                "`/reminders` — список | `/delremind <id>` — видалити\n\n" +
+                "`/remind завтра 9:00 Лекція` | `/reminders` | `/delremind <id>`\n\n" +
                 "📅 *Календар (Лаб 6)*\n" +
-                "`/addevent 25.03 14:00 Зустріч`\n" +
-                "`/events` — найближчі | `/events 25.03` — за датою\n" +
-                "`/delevent <id>` | `/exportics` — .ics файл\n\n" +
+                "`/addevent 25.03 14:00 Зустріч` | `/events` | `/exportics`\n\n" +
                 "🌐 *Переклад (Лаб 7)*\n" +
-                "`/translate en Привіт` — 🇬🇧 англійська\n" +
-                "`/translate de Як справи?` — 🇩🇪 німецька\n" +
-                "`/translate it Дякую` — 🇮🇹 італійська\n" +
-                "Або: _переклади на англійську: текст_\n\n" +
+                "`/translate en Привіт` | `de` | `it`\n\n" +
                 "📊 *Аналітика (Лаб 8)*\n" +
-                "`/stats` — тижнева статистика\n" +
-                "`/stats day` — за сьогодні\n" +
-                "`/exportcsv` — CSV файл (завантаження)\n\n" +
-                "💡 Бот розуміє вільний текст!";
+                "`/stats` | `/stats day` | `/exportcsv`\n\n" +
+                "🎙 *Голос (Лаб 9)*\n" +
+                "`/voicestatus` — перевірити залежності\n" +
+                "`/tts Текст` — синтез мовлення\n" +
+                "_Або надішліть голосове повідомлення!_\n\n" +
+                "💻 *Система (Лаб 10)*\n" +
+                "`/launch browser` | `/launch notepad` | `/launch calculator`\n" +
+                "`/sysinfo` — системна інформація\n" +
+                "`/network` — мережа\n" +
+                "`/volume 50` — гучність\n" +
+                "`/note Текст` — нотатка | `/notes` | `/readnote 1` | `/delnote 1`\n\n" +
+                "🧠 *Навчання NLL (Лаб 10)*\n" +
+                "`/learn фраза → НАМІР` — навчити команду\n" +
+                "`/mycommands` — мої команди\n" +
+                "`/forgetcmd фраза` — забути команду\n" +
+                "`/nllstats` — статистика навчання\n\n" +
+                "💡 Бот розуміє вільний текст і голос!";
     }
-
-    // ── Відправка тексту ──────────────────────────────────────────────────
 
     private void send(long chatId, String text) {
         try {

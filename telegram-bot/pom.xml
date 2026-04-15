@@ -49,12 +49,31 @@
 			<artifactId>hibernate-community-dialects</artifactId>
 		</dependency>
 
-		<!-- ЛАБ 6: iCal4j для роботи з .ics календарем -->
+		<!-- ЛАБ 6: iCal4j -->
 		<dependency>
 			<groupId>org.mnode.ical4j</groupId>
 			<artifactId>ical4j</artifactId>
 			<version>3.2.19</version>
 		</dependency>
+
+		<!--
+		    ЛАБ 9: Голосовий помічник
+		    Vosk STT і eSpeak-NG TTS викликаються через системні процеси (ProcessBuilder),
+		    тому Java-залежностей не потрібно — тільки системні утиліти:
+		      - ffmpeg: конвертація OGG↔WAV
+		      - vosk-transcriber: pip install vosk  (CLI утиліта)
+		      - espeak-ng: sudo apt install espeak-ng
+		      - Vosk модель: wget https://alphacephei.com/vosk/models/vosk-model-uk-v3.zip
+
+		    Для використання Vosk як Java-бібліотеки можна додати:
+		-->
+		<!-- OPTIONAL: Vosk Java binding (якщо хочете без CLI)
+		<dependency>
+			<groupId>com.alphacephei</groupId>
+			<artifactId>vosk</artifactId>
+			<version>0.3.47</version>
+		</dependency>
+		-->
 
 	</dependencies>
 
