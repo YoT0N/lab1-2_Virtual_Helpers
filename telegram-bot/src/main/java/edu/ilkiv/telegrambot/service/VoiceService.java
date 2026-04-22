@@ -100,7 +100,7 @@ public class VoiceService {
         Process proc = pb.start();
 
         // Читаємо вивід (щоб не заблокувало)
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
             br.lines().forEach(line -> log.debug("ffmpeg: {}", line));
         }
 
@@ -123,11 +123,17 @@ public class VoiceService {
                 "--input", wavFile.toAbsolutePath().toString(),
                 "--output-type", "txt"
         );
+
+        // ← КЛЮЧОВЕ ВИПРАВЛЕННЯ: змушуємо Python виводити UTF-8
+        pb.environment().put("PYTHONIOENCODING", "utf-8");
+        pb.environment().put("PYTHONUTF8", "1");
+
         pb.redirectErrorStream(false);
         Process proc = pb.start();
 
         StringBuilder result = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
                 result.append(line).append(" ");
