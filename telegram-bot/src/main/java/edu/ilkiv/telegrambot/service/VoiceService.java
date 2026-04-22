@@ -26,6 +26,12 @@ public class VoiceService {
     @Value("${voice.stt.model.path:./vosk-model-uk}")
     private String voskModelPath;
 
+    @Value("${voice.ffmpeg.path:ffmpeg}")
+    private String ffmpegPath;
+
+    @Value("${voice.espeak.path:espeak-ng}")
+    private String espeakPath;
+
     @Value("${voice.tts.lang:uk}")
     private String ttsLang;
 
@@ -83,10 +89,10 @@ public class VoiceService {
      */
     private boolean convertOggToWav(Path ogg, Path wav) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(
-                "ffmpeg", "-y",
+                ffmpegPath, "-y",          // ← було "ffmpeg"
                 "-i", ogg.toAbsolutePath().toString(),
-                "-ar", "16000",   // 16 кГц
-                "-ac", "1",       // моно
+                "-ar", "16000",
+                "-ac", "1",
                 "-f", "wav",
                 wav.toAbsolutePath().toString()
         );
@@ -160,10 +166,10 @@ public class VoiceService {
             Files.createDirectories(tmpPath);
 
             ProcessBuilder pb = new ProcessBuilder(
-                    "espeak-ng",
-                    "-v", ttsLang,         // мова (uk, en, de тощо)
-                    "-s", String.valueOf(ttsSpeed), // швидкість (слів/хв)
-                    "-w", wavFile.toAbsolutePath().toString(), // вивід у WAV
+                    espeakPath,                // ← було "espeak-ng"
+                    "-v", ttsLang,
+                    "-s", String.valueOf(ttsSpeed),
+                    "-w", wavFile.toAbsolutePath().toString(),
                     cleanText
             );
             pb.redirectErrorStream(true);
@@ -213,7 +219,7 @@ public class VoiceService {
             Files.write(wavFile, wavBytes);
 
             ProcessBuilder pb = new ProcessBuilder(
-                    "ffmpeg", "-y",
+                    ffmpegPath, "-y",          // ← було "ffmpeg"
                     "-i", wavFile.toAbsolutePath().toString(),
                     "-c:a", "libopus",
                     "-b:a", "32k",
@@ -248,9 +254,9 @@ public class VoiceService {
      */
     public String checkDependencies() {
         StringBuilder sb = new StringBuilder("🎙 *Залежності голосового модуля:*\n\n");
-        sb.append(checkCommand("ffmpeg", "-version")      ? "✅" : "❌").append(" ffmpeg\n");
-        sb.append(checkCommand("espeak-ng", "--version")  ? "✅" : "❌").append(" eSpeak-NG (TTS)\n");
-        sb.append(checkCommand("vosk-transcriber", null)  ? "✅" : "❌").append(" Vosk Transcriber (STT)\n");
+        sb.append(checkCommand(ffmpegPath, "-version")     ? "✅" : "❌").append(" ffmpeg\n");
+        sb.append(checkCommand(espeakPath, "--version")    ? "✅" : "❌").append(" eSpeak-NG (TTS)\n");
+        sb.append(checkCommand("vosk-transcriber", null)   ? "✅" : "❌").append(" Vosk Transcriber (STT)\n");
 
         boolean modelExists = Files.exists(Paths.get(voskModelPath));
         sb.append(modelExists ? "✅" : "❌").append(" Vosk модель (").append(voskModelPath).append(")\n");
