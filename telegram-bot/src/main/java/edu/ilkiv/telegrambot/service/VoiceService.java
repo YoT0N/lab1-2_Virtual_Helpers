@@ -32,7 +32,11 @@ public class VoiceService {
     @Value("${voice.espeak.path:espeak-ng}")
     private String espeakPath;
 
-    @Value("${voice.tts.lang:uk}")
+    // ВИПРАВЛЕННЯ 1: Змінено дефолт з "uk" на "en" — eSpeak-NG "uk" звучить
+    // нерозбірливо на більшості систем без встановленого mbrola.
+    // Якщо хочете справжній український голос — встановіть mbrola + mb-uk1
+    // і змініть на "mb-uk1" в application.properties (voice.tts.lang=mb-uk1)
+    @Value("${voice.tts.lang:en}")
     private String ttsLang;
 
     @Value("${voice.tts.speed:150}")
@@ -89,7 +93,7 @@ public class VoiceService {
      */
     private boolean convertOggToWav(Path ogg, Path wav) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(
-                ffmpegPath, "-y",          // ← було "ffmpeg"
+                ffmpegPath, "-y",
                 "-i", ogg.toAbsolutePath().toString(),
                 "-ar", "16000",
                 "-ac", "1",
@@ -99,8 +103,8 @@ public class VoiceService {
         pb.redirectErrorStream(true);
         Process proc = pb.start();
 
-        // Читаємо вивід (щоб не заблокувало)
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
             br.lines().forEach(line -> log.debug("ffmpeg: {}", line));
         }
 
@@ -114,7 +118,8 @@ public class VoiceService {
 
     /**
      * Запускає vosk-transcriber і повертає розпізнаний текст.
-     * Очікує що vosk-transcriber встановлено: pip install vosk
+     * ВИПРАВЛЕННЯ: Встановлюємо PYTHONIOENCODING=utf-8 щоб уникнути
+     * проблем з кодуванням CP1251 на Windows.
      */
     private String runVoskTranscriber(Path wavFile) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(
@@ -124,7 +129,7 @@ public class VoiceService {
                 "--output-type", "txt"
         );
 
-        // ← КЛЮЧОВЕ ВИПРАВЛЕННЯ: змушуємо Python виводити UTF-8
+        // КЛЮЧОВЕ ВИПРАВЛЕННЯ: змушуємо Python виводити UTF-8 на Windows
         pb.environment().put("PYTHONIOENCODING", "utf-8");
         pb.environment().put("PYTHONUTF8", "1");
 
@@ -155,14 +160,24 @@ public class VoiceService {
      * Синтезує мовлення з тексту через eSpeak-NG.
      * Повертає WAV байти або null у разі помилки.
      *
-     * Потребує: sudo apt install espeak-ng
+     * ВИПРАВЛЕННЯ: Використовуємо покращений stripMarkdown який видаляє
+     * весь Markdown, emoji та спецсимволи перед синтезом.
      */
     public byte[] textToSpeech(String text) {
         if (text == null || text.isBlank()) return null;
 
-        // Очищаємо Markdown розмітку (зірочки, підкреслення тощо)
+        // ВИПРАВЛЕННЯ 2: Використовуємо покращений stripMarkdown
         String cleanText = stripMarkdown(text);
         if (cleanText.isBlank()) return null;
+
+        // Обмежуємо довжину — eSpeak може зависнути на дуже довгому тексті
+        if (cleanText.length() > 500) {
+            cleanText = cleanText.substring(0, 500);
+            log.info("TTS: текст обрізано до 500 символів");
+        }
+
+        log.info("TTS: синтез тексту (lang={}): '{}'", ttsLang,
+                cleanText.substring(0, Math.min(80, cleanText.length())));
 
         Path tmpPath = Paths.get(tmpDir);
         String uid = UUID.randomUUID().toString().substring(0, 8);
@@ -172,7 +187,7 @@ public class VoiceService {
             Files.createDirectories(tmpPath);
 
             ProcessBuilder pb = new ProcessBuilder(
-                    espeakPath,                // ← було "espeak-ng"
+                    espeakPath,
                     "-v", ttsLang,
                     "-s", String.valueOf(ttsSpeed),
                     "-w", wavFile.toAbsolutePath().toString(),
@@ -181,7 +196,8 @@ public class VoiceService {
             pb.redirectErrorStream(true);
             Process proc = pb.start();
 
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
                 br.lines().forEach(line -> log.debug("espeak: {}", line));
             }
 
@@ -197,7 +213,7 @@ public class VoiceService {
             }
 
             byte[] wavBytes = Files.readAllBytes(wavFile);
-            log.info("TTS: синтезовано {} байт для тексту: '{}'", wavBytes.length, cleanText.substring(0, Math.min(50, cleanText.length())));
+            log.info("TTS: синтезовано {} байт", wavBytes.length);
             return wavBytes;
 
         } catch (Exception e) {
@@ -225,7 +241,7 @@ public class VoiceService {
             Files.write(wavFile, wavBytes);
 
             ProcessBuilder pb = new ProcessBuilder(
-                    ffmpegPath, "-y",          // ← було "ffmpeg"
+                    ffmpegPath, "-y",
                     "-i", wavFile.toAbsolutePath().toString(),
                     "-c:a", "libopus",
                     "-b:a", "32k",
@@ -233,7 +249,8 @@ public class VoiceService {
             );
             pb.redirectErrorStream(true);
             Process proc = pb.start();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(proc.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
                 br.lines().forEach(line -> log.debug("ffmpeg OGG: {}", line));
             }
             proc.waitFor();
@@ -256,21 +273,31 @@ public class VoiceService {
 
     /**
      * Перевіряє наявність необхідних системних утиліт.
-     * Викликається при старті (PostConstruct в InfoBot).
      */
     public String checkDependencies() {
         StringBuilder sb = new StringBuilder("🎙 *Залежності голосового модуля:*\n\n");
-        sb.append(checkCommand(ffmpegPath, "-version")     ? "✅" : "❌").append(" ffmpeg\n");
-        sb.append(checkCommand(espeakPath, "--version")    ? "✅" : "❌").append(" eSpeak-NG (TTS)\n");
-        sb.append(checkCommand("vosk-transcriber", null)   ? "✅" : "❌").append(" Vosk Transcriber (STT)\n");
+        sb.append(checkCommand(ffmpegPath, "-version")    ? "✅" : "❌").append(" ffmpeg\n");
+        sb.append(checkCommand(espeakPath, "--version")   ? "✅" : "❌").append(" eSpeak-NG (TTS)\n");
+        sb.append(checkCommand("vosk-transcriber", null)  ? "✅" : "❌").append(" Vosk Transcriber (STT)\n");
 
         boolean modelExists = Files.exists(Paths.get(voskModelPath));
         sb.append(modelExists ? "✅" : "❌").append(" Vosk модель (").append(voskModelPath).append(")\n");
+
+        sb.append("\n🔊 TTS мова: `").append(ttsLang).append("`\n");
+        sb.append("🔊 TTS швидкість: `").append(ttsSpeed).append("` слів/хв\n");
 
         if (!modelExists) {
             sb.append("\n💡 Завантажте українську модель:\n");
             sb.append("`wget https://alphacephei.com/vosk/models/vosk-model-uk-v3.zip`\n");
             sb.append("`unzip vosk-model-uk-v3.zip -d vosk-model-uk`");
+        }
+
+        // Підказка про голос
+        if ("uk".equals(ttsLang)) {
+            sb.append("\n\n⚠️ Голос `uk` потребує mbrola для кращої якості.\n");
+            sb.append("Рекомендовано: встановіть `mbrola` і `mb-uk1`,\n");
+            sb.append("потім змініть `voice.tts.lang=mb-uk1` в application.properties.\n");
+            sb.append("Або використайте `voice.tts.lang=en` для чіткого англійського голосу.");
         }
 
         return sb.toString();
@@ -284,7 +311,7 @@ public class VoiceService {
             pb.redirectErrorStream(true);
             Process p = pb.start();
             try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                br.lines().forEach(l -> {}); // споживаємо вивід
+                br.lines().forEach(l -> {});
             }
             p.waitFor();
             return true;
@@ -294,17 +321,56 @@ public class VoiceService {
     }
 
     /**
-     * Видаляє Markdown розмітку з тексту перед синтезом мовлення.
+     * ВИПРАВЛЕННЯ 2: Покращений stripMarkdown.
+     *
+     * Проблема: старий метод не видаляв всі emoji та деякі Markdown конструкції,
+     * через що eSpeak намагався буквально вимовляти "*", "🌤", "/" тощо,
+     * що робило голос нерозбірливим і "дивним".
+     *
+     * Тепер:
+     * - Видаляє весь Unicode emoji блоком (діапазон \uD83C–\uDBFF + \uDC00–\uDFFF)
+     * - Видаляє Markdown: **bold**, *italic*, _italic_, `code`, # headers
+     * - Видаляє слеші команд (/weather → weather)
+     * - Видаляє URL-и
+     * - Видаляє зайві пробіли та пунктуацію що залишилась
      */
     public String stripMarkdown(String text) {
-        return text
-                .replaceAll("\\*([^*]+)\\*", "$1")    // **bold** або *italic*
-                .replaceAll("_([^_]+)_", "$1")          // _italic_
-                .replaceAll("`([^`]+)`", "$1")           // `code`
-                .replaceAll("#+ ", "")                   // заголовки
-                .replaceAll("\\[([^]]+)]\\([^)]+\\)", "$1") // [text](url)
-                .replaceAll("[🌤💰💱🔔📅🌐👤📊❌✅🎙🤔💧💨📋👋🏙🏷🕐📌📍]", "") // emoji
+        if (text == null) return "";
+
+        String result = text
+                // 1. Видаляємо URL-и
+                .replaceAll("https?://\\S+", "")
+                // 2. Видаляємо Markdown посилання [text](url)
+                .replaceAll("\\[([^]]+)]\\([^)]+\\)", "$1")
+                // 3. Видаляємо **bold** і *italic* (з вмістом залишаємо)
+                .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")
+                .replaceAll("\\*([^*]+)\\*", "$1")
+                // 4. Видаляємо _italic_
+                .replaceAll("_([^_]+)_", "$1")
+                // 5. Видаляємо `code`
+                .replaceAll("`([^`]+)`", "$1")
+                // 6. Видаляємо ``` code blocks ```
+                .replaceAll("```[\\s\\S]*?```", "")
+                // 7. Видаляємо # заголовки
+                .replaceAll("(?m)^#{1,6}\\s+", "")
+                // 8. Видаляємо /команди (слеш перед словом)
+                .replaceAll("/\\w+", "")
+                // 9. Видаляємо одиночні * що залишились
+                .replaceAll("\\*", "")
+                // 10. Видаляємо emoji: surrogate pairs (💬🌤 тощо)
+                .replaceAll("[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]", "")
+                // 11. Видаляємо emoji в діапазоні Basic Multilingual Plane
+                .replaceAll("[\\u2600-\\u27BF]", "")
+                .replaceAll("[\\u2300-\\u23FF]", "")
+                .replaceAll("[\\u2B00-\\u2BFF]", "")
+                .replaceAll("[\\u1F000-\\u1FFFF]", "")
+                // 12. Видаляємо символи що eSpeak вимовляє буквально
+                .replaceAll("[|•→←↑↓►◄▲▼]", " ")
+                // 13. Нормалізуємо пробіли
+                .replaceAll("\\s{2,}", " ")
                 .trim();
+
+        return result;
     }
 
     private void silentDelete(Path path) {
