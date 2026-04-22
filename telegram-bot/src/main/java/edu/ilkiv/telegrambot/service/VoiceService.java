@@ -338,32 +338,121 @@ public class VoiceService {
         if (text == null) return "";
 
         String result = text
-                .replaceAll("https?://\\S+", "")
-                .replaceAll("\\[([^]]+)]\\([^)]+\\)", "$1")
-                .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")
-                .replaceAll("\\*([^*]+)\\*", "$1")
-                .replaceAll("_([^_]+)_", "$1")
-                .replaceAll("`([^`]+)`", "$1")
-                .replaceAll("```[\\s\\S]*?```", "")
-                .replaceAll("(?m)^#{1,6}\\s+", "")
-                .replaceAll("/\\w+", "")
-                .replaceAll("\\*", "")
+                // Видаляємо емодзі (surrogate pairs)
                 .replaceAll("[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]", "")
+                // Видаляємо емодзі (BMP блоки)
                 .replaceAll("[\\u2600-\\u27BF]", "")
                 .replaceAll("[\\u2300-\\u23FF]", "")
                 .replaceAll("[\\u2B00-\\u2BFF]", "")
-                .replaceAll("[\\u1F000-\\u1FFFF]", "")
-                .replaceAll("[|•→←↑↓►◄▲▼]", " ")
-                // ← НОВЕ: видаляємо стрілки формату "USD -> 1.0000"
+                // Markdown
+                .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")
+                .replaceAll("\\*([^*]+)\\*", "$1")
+                .replaceAll("_([^_]+)_", "$1")
+                .replaceAll("`[^`]+`", "")
+                .replaceAll("```[\\s\\S]*?```", "")
+                // URL
+                .replaceAll("https?://\\S+", "")
+                // /команди
+                .replaceAll("(?<![\\w])/\\w+", " ")
+                // Спецсимволи → пробіл
+                .replaceAll("[|•→←↑↓►◄▲▼*#@_]", " ")
+                // Замінюємо одиниці виміру на вимовні англійські
+                .replaceAll("([\\d.]+)\\s*°C", "$1 degrees Celsius")
+                .replaceAll("([\\d.]+)\\s*°", "$1 degrees")
+                .replaceAll("([\\d]+)\\s*%", "$1 percent")
+                .replaceAll("([\\d.]+)\\s*м/с", "$1 meters per second")
+                // Рядки виду "USD -> 1.0000"
                 .replaceAll("[A-Z]{2,5}\\s*->\\s*[\\d.]+", "")
-                // ← НОВЕ: видаляємо числові рядки типу "1.0000"
-                .replaceAll("(?m)^[\\s\\d.,:/\\-]+$", "")
-                // ← НОВЕ: видаляємо рядки що складаються лише з пунктуації
-                .replaceAll("(?m)^[\\s.\\-,:;!?*#@%^&()+=\\[\\]{}|<>]+$", "")
+                // Кирилицю транслітеруємо в латиницю
+                .replaceAll("(?m)^[^a-zA-Zа-яіїєґА-ЯІЇЄҐ0-9]+$", "")
                 .replaceAll("\\s{2,}", " ")
                 .trim();
 
+        // Транслітерація кирилиці → латиниця для eSpeak en
+        return transliterate(result);
+    }
+
+    private String transliterate(String text) {
+        if (text == null) return "";
+
+        // Таблиця транслітерації українська → англійська вимова
+        String[][] table = {
+                {"погода", "weather"},
+                {"температура", "temperature"},
+                {"відчувається", "feels like"},
+                {"вологість", "humidity"},
+                {"вітер", "wind"},
+                {"рвані хмари", "broken clouds"},
+                {"невеликі хмари", "few clouds"},
+                {"ясно", "clear sky"},
+                {"хмарно", "cloudy"},
+                {"дощ", "rain"},
+                {"сніг", "snow"},
+                {"туман", "fog"},
+                {"буря", "storm"},
+                {"курс", "exchange rate"},
+                {"конвертація", "conversion"},
+                {"нагадування", "reminder"},
+                {"подію додано", "event added"},
+                {"нотатку збережено", "note saved"},
+                {"системна інформація", "system information"},
+                {"мережева інформація", "network information"},
+                {"гучність встановлено", "volume set"},
+                {"запускаю", "launching"},
+                {"браузер", "browser"},
+                {"калькулятор", "calculator"},
+                {"термінал", "terminal"},
+                {"привіт", "hello"},
+                {"дякую", "thank you"},
+                {"так", "yes"},
+                {"ні", "no"},
+                {"помилка", "error"},
+                {"успішно", "success"},
+                // Решта кирилиці — побуквена транслітерація
+        };
+
+        String result = text.toLowerCase();
+        for (String[] pair : table) {
+            result = result.replace(pair[0], pair[1]);
+        }
+
+        // Побуквена транслітерація для решти кирилиці
+        result = cyrillicToLatin(result);
+
         return result;
+    }
+
+    private String cyrillicToLatin(String text) {
+        StringBuilder sb = new StringBuilder();
+        for (char c : text.toCharArray()) {
+            sb.append(switch (c) {
+                case 'а' -> "a";  case 'б' -> "b";  case 'в' -> "v";
+                case 'г' -> "h";  case 'ґ' -> "g";  case 'д' -> "d";
+                case 'е' -> "e";  case 'є' -> "ye"; case 'ж' -> "zh";
+                case 'з' -> "z";  case 'и' -> "y";  case 'і' -> "i";
+                case 'ї' -> "yi"; case 'й' -> "y";  case 'к' -> "k";
+                case 'л' -> "l";  case 'м' -> "m";  case 'н' -> "n";
+                case 'о' -> "o";  case 'п' -> "p";  case 'р' -> "r";
+                case 'с' -> "s";  case 'т' -> "t";  case 'у' -> "u";
+                case 'ф' -> "f";  case 'х' -> "kh"; case 'ц' -> "ts";
+                case 'ч' -> "ch"; case 'ш' -> "sh"; case 'щ' -> "shch";
+                case 'ь' -> "";   case 'ю' -> "yu"; case 'я' -> "ya";
+                // Великі літери
+                case 'А' -> "A";  case 'Б' -> "B";  case 'В' -> "V";
+                case 'Г' -> "H";  case 'Ґ' -> "G";  case 'Д' -> "D";
+                case 'Е' -> "E";  case 'Є' -> "Ye"; case 'Ж' -> "Zh";
+                case 'З' -> "Z";  case 'И' -> "Y";  case 'І' -> "I";
+                case 'Ї' -> "Yi"; case 'Й' -> "Y";  case 'К' -> "K";
+                case 'Л' -> "L";  case 'М' -> "M";  case 'Н' -> "N";
+                case 'О' -> "O";  case 'П' -> "P";  case 'Р' -> "R";
+                case 'С' -> "S";  case 'Т' -> "T";  case 'У' -> "U";
+                case 'Ф' -> "F";  case 'Х' -> "Kh"; case 'Ц' -> "Ts";
+                case 'Ч' -> "Ch"; case 'Ш' -> "Sh"; case 'Щ' -> "Shch";
+                case 'Ь' -> "";   case 'Ю' -> "Yu"; case 'Я' -> "Ya";
+                default  -> String.valueOf(c);
+            });
+        }
+        return sb.toString();
     }
 
     private void silentDelete(Path path) {

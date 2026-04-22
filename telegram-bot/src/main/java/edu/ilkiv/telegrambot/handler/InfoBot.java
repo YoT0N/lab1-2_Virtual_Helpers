@@ -375,7 +375,7 @@ public class InfoBot extends TelegramLongPollingBot {
                 // Активація голосових відповідей (зберігаємо в профілі через флаг)
                 yield "🎙 Голосові відповіді: спробуйте надіслати голосове повідомлення!";
             }
-            case "/tts"         -> {
+            case "/tts" -> {
                 if (arg.isBlank()) yield "❓ `/tts Текст для синтезу мовлення`";
                 sendVoiceReply(chatId, arg);
                 yield "🔊 Синтезую мовлення...";
