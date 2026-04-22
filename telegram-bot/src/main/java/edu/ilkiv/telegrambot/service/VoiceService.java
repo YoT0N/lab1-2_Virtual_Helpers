@@ -338,35 +338,28 @@ public class VoiceService {
         if (text == null) return "";
 
         String result = text
-                // 1. Видаляємо URL-и
                 .replaceAll("https?://\\S+", "")
-                // 2. Видаляємо Markdown посилання [text](url)
                 .replaceAll("\\[([^]]+)]\\([^)]+\\)", "$1")
-                // 3. Видаляємо **bold** і *italic* (з вмістом залишаємо)
                 .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")
                 .replaceAll("\\*([^*]+)\\*", "$1")
-                // 4. Видаляємо _italic_
                 .replaceAll("_([^_]+)_", "$1")
-                // 5. Видаляємо `code`
                 .replaceAll("`([^`]+)`", "$1")
-                // 6. Видаляємо ``` code blocks ```
                 .replaceAll("```[\\s\\S]*?```", "")
-                // 7. Видаляємо # заголовки
                 .replaceAll("(?m)^#{1,6}\\s+", "")
-                // 8. Видаляємо /команди (слеш перед словом)
                 .replaceAll("/\\w+", "")
-                // 9. Видаляємо одиночні * що залишились
                 .replaceAll("\\*", "")
-                // 10. Видаляємо emoji: surrogate pairs (💬🌤 тощо)
                 .replaceAll("[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]", "")
-                // 11. Видаляємо emoji в діапазоні Basic Multilingual Plane
                 .replaceAll("[\\u2600-\\u27BF]", "")
                 .replaceAll("[\\u2300-\\u23FF]", "")
                 .replaceAll("[\\u2B00-\\u2BFF]", "")
                 .replaceAll("[\\u1F000-\\u1FFFF]", "")
-                // 12. Видаляємо символи що eSpeak вимовляє буквально
                 .replaceAll("[|•→←↑↓►◄▲▼]", " ")
-                // 13. Нормалізуємо пробіли
+                // ← НОВЕ: видаляємо стрілки формату "USD -> 1.0000"
+                .replaceAll("[A-Z]{2,5}\\s*->\\s*[\\d.]+", "")
+                // ← НОВЕ: видаляємо числові рядки типу "1.0000"
+                .replaceAll("(?m)^[\\s\\d.,:/\\-]+$", "")
+                // ← НОВЕ: видаляємо рядки що складаються лише з пунктуації
+                .replaceAll("(?m)^[\\s.\\-,:;!?*#@%^&()+=\\[\\]{}|<>]+$", "")
                 .replaceAll("\\s{2,}", " ")
                 .trim();
 
